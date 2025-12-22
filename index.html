@@ -7,7 +7,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Elite Structural FX</title>
     <style>
-        /* FONT FIX: Embedding NType82 directly into the file */
         @font-face {
             font-family: 'NType82';
             src: url('data:font/otf;base64,AAEAAAARAQAABAAQR0RFRmY...') format('opentype');
@@ -66,76 +65,57 @@
             justify-content: space-between; 
         }
 
-        /* UI Elements */
         .sync-indicator { font-size: 11px; font-weight: bold; color: var(--accent); letter-spacing: 1.5px; }
         .dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-        /* RED Resync Button Style */
         .resync-btn {
-            background: transparent;
-            color: var(--accent); /* Matches the app theme red */
-            border-radius: 50%;
-            width: 32px;
-            height: 32px;
+            color: var(--accent);
+            width: 35px;
+            height: 35px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 18px;
-            transition: all 0.2s ease;
-            user-select: none;
+            font-size: 20px;
+            transition: transform 0.2s ease;
         }
-        .resync-btn:active { 
-            transform: rotate(90deg) scale(0.8);
-            opacity: 0.7;
-        }
+        .spinning { animation: spin 0.8s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
 
         #val-in { 
-            font-size: 52px; 
-            color: var(--text); 
-            border: none; 
-            background: transparent; 
-            outline: none; 
-            width: 70%; 
-            font-family: 'NType82' !important;
+            font-size: 52px; color: var(--text); border: none; background: transparent; 
+            outline: none; width: 70%; font-family: 'NType82' !important;
         }
         .result-amt { font-size: 60px; color: var(--accent); line-height: 1; font-family: 'NType82' !important; }
         
-        .keypad-grid { 
-            display: grid; 
-            grid-template-columns: 3fr 1fr; 
-            gap: 12px; 
-            height: 48%; 
-            max-height: 400px;
-        }
+        .keypad-grid { display: grid; grid-template-columns: 3fr 1fr; gap: 12px; height: 45%; }
         .numeric-zone { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
         .key { 
-            background: var(--key-bg); 
-            border-radius: 22px; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            font-size: 32px; 
-            cursor: pointer; 
-            user-select: none;
-            font-family: 'NType82' !important;
+            background: var(--key-bg); border-radius: 22px; display: flex; 
+            justify-content: center; align-items: center; font-size: 30px; 
+            cursor: pointer; user-select: none;
         }
         .key:active { background: var(--key-active); transform: scale(0.92); }
-        .pill-ac { background: var(--accent); color: white; font-size: 24px; }
+        .pill-ac { background: var(--accent); color: white; font-size: 22px; }
         
-        #picker-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); z-index: 1000; display: none; flex-direction: column; padding: 20px; }
-        .country-item { padding: 18px; border-bottom: 1px solid var(--key-bg); font-family: 'NType82' !important; }
+        #picker-modal { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; 
+            background: var(--bg); z-index: 1000; display: none; 
+            flex-direction: column; padding: 20px; 
+            padding-top: max(20px, env(safe-area-inset-top));
+        }
+        .country-item { padding: 18px; border-bottom: 1px solid var(--key-bg); }
     </style>
 </head>
 <body class="dark-mode">
 
 <div id="picker-modal">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="font-size: 28px;">Select Currency</h2>
-        <span onclick="closePicker()" style="font-size: 45px; cursor: pointer;">×</span>
+        <h2 style="font-size: 24px;">Select Currency</h2>
+        <span onclick="closePicker()" style="font-size: 40px; cursor: pointer;">×</span>
     </div>
-    <input type="text" id="search-box" style="background: var(--key-bg); border: none; padding: 15px; border-radius: 15px; color: white; width: 100%; margin-bottom: 10px;" placeholder="Search..." oninput="filterCountries(this.value)">
+    <input type="text" id="search-box" style="background: var(--key-bg); border: none; padding: 15px; border-radius: 15px; color: var(--text); width: 100%; margin-bottom: 10px; outline: none;" placeholder="Search currency..." oninput="filterCountries(this.value)">
     <div id="country-list" style="flex: 1; overflow-y: auto;"></div>
 </div>
 
@@ -149,7 +129,7 @@
                 </div>
                 <div id="last-update" style="font-size: 10px; color: var(--secondary-text);">Syncing...</div>
             </div>
-            <div class="resync-btn" onclick="updateRates()" title="Sync Now">↺</div>
+            <div id="resync-icon" class="resync-btn" onclick="updateRates()">↺</div>
         </div>
         <div onclick="toggleTheme()" style="font-size: 24px; cursor: pointer;">☀️</div>
     </div>
@@ -164,14 +144,12 @@
         <div id="code-out" style="font-size: 20px; color: var(--secondary-text);">SAR</div>
     </div>
 
-    <div style="display: flex; gap: 15px; margin-bottom: 20px; position: relative; align-items: center;">
+    <div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center;">
         <div class="key" style="flex: 1; height: 60px; font-size: 18px; flex-direction: column;" onclick="openPicker('from')">
             <span style="font-size: 9px; opacity: 0.6;">FROM</span>
             <span id="from-btn-text">USD</span>
         </div>
-        
-        <div onclick="swap()" style="width: 40px; height: 40px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10; cursor: pointer; color: white; font-size: 20px; font-weight: bold;">⇄</div>
-        
+        <div onclick="swap()" style="width: 40px; height: 40px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; font-size: 20px;">⇄</div>
         <div class="key" style="flex: 1; height: 60px; font-size: 18px; flex-direction: column;" onclick="openPicker('to')">
             <span style="font-size: 9px; opacity: 0.6;">TO</span>
             <span id="to-btn-text">SAR</span>
@@ -187,7 +165,7 @@
         </div>
         <div style="display: grid; grid-template-rows: 1fr 1fr; gap: 12px;">
             <div class="key pill-ac" onclick="num('AC')">AC</div>
-            <div class="key" onclick="num('DEL')" style="color: var(--accent); font-size: 35px;">⌫</div>
+            <div class="key" onclick="num('DEL')" style="color: var(--accent); font-size: 30px;">⌫</div>
         </div>
     </div>
 </div>
@@ -200,27 +178,24 @@
     let activeTarget = 'from';
 
     async function init() {
-        try {
-            const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.json');
-            currencyList = await res.json();
-            if(currencyList['1inch']) delete currencyList['1inch'];
-            updateRates();
-        } catch(e) { console.error("Init failed", e); }
+        const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.json');
+        currencyList = await res.json();
+        delete currencyList['1inch'];
+        updateRates();
     }
 
     async function updateRates() {
+        const btn = document.getElementById('resync-icon');
         const syncLabel = document.getElementById('last-update');
-        syncLabel.innerText = "Syncing...";
+        btn.classList.add('spinning');
         try {
             const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${fromCode}.json`);
             const data = await res.json();
             ratesData = data[fromCode];
             syncLabel.innerText = `Synced: ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
             convert();
-        } catch(e) {
-            syncLabel.innerText = "Offline";
-            console.error(e);
-        }
+        } catch(e) { syncLabel.innerText = "Offline"; }
+        setTimeout(() => btn.classList.remove('spinning'), 600);
     }
 
     function num(k) {
@@ -254,7 +229,7 @@
         const list = document.getElementById('country-list');
         list.innerHTML = '';
         Object.keys(currencyList).sort().forEach(code => {
-            if(code !== '1inch' && (code.includes(q.toLowerCase()) || currencyList[code].toLowerCase().includes(q.toLowerCase()))) {
+            if(code.includes(q.toLowerCase()) || currencyList[code].toLowerCase().includes(q.toLowerCase())) {
                 const item = document.createElement('div');
                 item.className = 'country-item';
                 item.innerHTML = `<strong>${currencyList[code]}</strong> (${code.toUpperCase()})`;
