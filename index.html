@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Elite Structural FX</title>
     <style>
+        /* FONT RESTORED & FIXED FOR MOBILE */
         @font-face {
             font-family: 'NType82';
             src: url('data:font/otf;base64,AAEAAAARAQAABAAQR0RFRmY...') format('opentype');
@@ -38,7 +39,7 @@
             margin: 0; 
             padding: 0; 
             box-sizing: border-box; 
-            font-family: 'NType82', -apple-system, BlinkMacSystemFont, sans-serif !important; 
+            font-family: 'NType82', -apple-system, BlinkMacSystemFont, sans-serif; 
             -webkit-tap-highlight-color: transparent; 
         }
 
@@ -65,35 +66,50 @@
             justify-content: space-between; 
         }
 
+        /* UI Elements */
         .sync-indicator { font-size: 11px; font-weight: bold; color: var(--accent); letter-spacing: 1.5px; }
         .dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
+        /* SMOOTH CENTRIC ROTATION */
         .resync-btn {
             color: var(--accent);
-            width: 35px;
-            height: 35px;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 20px;
             transition: transform 0.2s ease;
         }
-        .spinning { animation: spin 0.8s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+
+        #resync-icon {
+            display: inline-block;
+            font-size: 22px;
+            line-height: 1;
+            transform-origin: center center;
+        }
+
+        .spinning {
+            animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-360deg); }
+        }
 
         #val-in { 
             font-size: 52px; color: var(--text); border: none; background: transparent; 
-            outline: none; width: 70%; font-family: 'NType82' !important;
+            outline: none; width: 70%; font-family: 'NType82';
         }
-        .result-amt { font-size: 60px; color: var(--accent); line-height: 1; font-family: 'NType82' !important; }
+        .result-amt { font-size: 60px; color: var(--accent); line-height: 1; font-family: 'NType82'; }
         
         .keypad-grid { display: grid; grid-template-columns: 3fr 1fr; gap: 12px; height: 45%; }
         .numeric-zone { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
         .key { 
             background: var(--key-bg); border-radius: 22px; display: flex; 
-            justify-content: center; align-items: center; font-size: 30px; 
+            justify-content: center; align-items: center; font-size: 32px; 
             cursor: pointer; user-select: none;
         }
         .key:active { background: var(--key-active); transform: scale(0.92); }
@@ -105,7 +121,7 @@
             flex-direction: column; padding: 20px; 
             padding-top: max(20px, env(safe-area-inset-top));
         }
-        .country-item { padding: 18px; border-bottom: 1px solid var(--key-bg); }
+        .country-item { padding: 18px; border-bottom: 1px solid var(--key-bg); font-family: 'NType82'; }
     </style>
 </head>
 <body class="dark-mode">
@@ -121,7 +137,7 @@
 
 <div class="app-container">
     <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 4px;">
             <div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span class="dot"></span>
@@ -129,7 +145,9 @@
                 </div>
                 <div id="last-update" style="font-size: 10px; color: var(--secondary-text);">Syncing...</div>
             </div>
-            <div id="resync-icon" class="resync-btn" onclick="updateRates()">↺</div>
+            <div class="resync-btn" onclick="updateRates()">
+                <span id="resync-icon">↺</span>
+            </div>
         </div>
         <div onclick="toggleTheme()" style="font-size: 24px; cursor: pointer;">☀️</div>
     </div>
@@ -185,9 +203,9 @@
     }
 
     async function updateRates() {
-        const btn = document.getElementById('resync-icon');
+        const icon = document.getElementById('resync-icon');
         const syncLabel = document.getElementById('last-update');
-        btn.classList.add('spinning');
+        icon.classList.add('spinning');
         try {
             const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${fromCode}.json`);
             const data = await res.json();
@@ -195,7 +213,7 @@
             syncLabel.innerText = `Synced: ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
             convert();
         } catch(e) { syncLabel.innerText = "Offline"; }
-        setTimeout(() => btn.classList.remove('spinning'), 600);
+        setTimeout(() => icon.classList.remove('spinning'), 800);
     }
 
     function num(k) {
