@@ -10,7 +10,6 @@
         /* FONT FIX: Embedding NType82 directly into the file */
         @font-face {
             font-family: 'NType82';
-            /* The font data is now baked into the code */
             src: url('data:font/otf;base64,AAEAAAARAQAABAAQR0RFRmY...') format('opentype');
             font-weight: normal;
             font-style: normal;
@@ -36,7 +35,6 @@
             --key-active: #C7C7CC;
         }
 
-        /* FORCE FONT ON EVERYTHING */
         * { 
             margin: 0; 
             padding: 0; 
@@ -73,7 +71,26 @@
         .dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-        /* Display Area Fixes */
+        /* RED Resync Button Style */
+        .resync-btn {
+            background: transparent;
+            color: var(--accent); /* Matches the app theme red */
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        .resync-btn:active { 
+            transform: rotate(90deg) scale(0.8);
+            opacity: 0.7;
+        }
+
         #val-in { 
             font-size: 52px; 
             color: var(--text); 
@@ -85,7 +102,6 @@
         }
         .result-amt { font-size: 60px; color: var(--accent); line-height: 1; font-family: 'NType82' !important; }
         
-        /* Keypad Fixes - Ensuring Font on Numbers */
         .keypad-grid { 
             display: grid; 
             grid-template-columns: 3fr 1fr; 
@@ -103,12 +119,11 @@
             font-size: 32px; 
             cursor: pointer; 
             user-select: none;
-            font-family: 'NType82' !important; /* Force font on numbers */
+            font-family: 'NType82' !important;
         }
         .key:active { background: var(--key-active); transform: scale(0.92); }
         .pill-ac { background: var(--accent); color: white; font-size: 24px; }
         
-        /* Modal Fixes */
         #picker-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); z-index: 1000; display: none; flex-direction: column; padding: 20px; }
         .country-item { padding: 18px; border-bottom: 1px solid var(--key-bg); font-family: 'NType82' !important; }
     </style>
@@ -126,12 +141,15 @@
 
 <div class="app-container">
     <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="dot"></span>
-                <span class="sync-indicator">LIVE</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="dot"></span>
+                    <span class="sync-indicator">LIVE</span>
+                </div>
+                <div id="last-update" style="font-size: 10px; color: var(--secondary-text);">Syncing...</div>
             </div>
-            <div id="last-update" style="font-size: 10px; color: var(--secondary-text);">Syncing...</div>
+            <div class="resync-btn" onclick="updateRates()" title="Sync Now">↺</div>
         </div>
         <div onclick="toggleTheme()" style="font-size: 24px; cursor: pointer;">☀️</div>
     </div>
@@ -151,7 +169,9 @@
             <span style="font-size: 9px; opacity: 0.6;">FROM</span>
             <span id="from-btn-text">USD</span>
         </div>
-        <div onclick="swap()" style="width: 40px; height: 40px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10; cursor: pointer; color: white;">⇅</div>
+        
+        <div onclick="swap()" style="width: 40px; height: 40px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10; cursor: pointer; color: white; font-size: 20px; font-weight: bold;">⇄</div>
+        
         <div class="key" style="flex: 1; height: 60px; font-size: 18px; flex-direction: column;" onclick="openPicker('to')">
             <span style="font-size: 9px; opacity: 0.6;">TO</span>
             <span id="to-btn-text">SAR</span>
@@ -180,18 +200,27 @@
     let activeTarget = 'from';
 
     async function init() {
-        const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.json');
-        currencyList = await res.json();
-        if(currencyList['1inch']) delete currencyList['1inch'];
-        updateRates();
+        try {
+            const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.json');
+            currencyList = await res.json();
+            if(currencyList['1inch']) delete currencyList['1inch'];
+            updateRates();
+        } catch(e) { console.error("Init failed", e); }
     }
 
     async function updateRates() {
-        const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${fromCode}.json`);
-        const data = await res.json();
-        ratesData = data[fromCode];
-        document.getElementById('last-update').innerText = `Sync: ${new Date().toLocaleTimeString()}`;
-        convert();
+        const syncLabel = document.getElementById('last-update');
+        syncLabel.innerText = "Syncing...";
+        try {
+            const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${fromCode}.json`);
+            const data = await res.json();
+            ratesData = data[fromCode];
+            syncLabel.innerText = `Synced: ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+            convert();
+        } catch(e) {
+            syncLabel.innerText = "Offline";
+            console.error(e);
+        }
     }
 
     function num(k) {
