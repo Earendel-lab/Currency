@@ -7,15 +7,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Elite Structural FX</title>
     <style>
-        /* FONT RESTORED & FIXED FOR MOBILE */
-        @font-face {
-            font-family: 'NType82';
-            src: url('data:font/otf;base64,AAEAAAARAQAABAAQR0RFRmY...') format('opentype');
-            font-weight: normal;
-            font-style: normal;
-            font-display: swap;
-        }
-
         :root {
             --bg: #000000;
             --surface: #1C1C1E;
@@ -39,18 +30,20 @@
             margin: 0; 
             padding: 0; 
             box-sizing: border-box; 
-            font-family: 'NType82', -apple-system, BlinkMacSystemFont, sans-serif; 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
             -webkit-tap-highlight-color: transparent; 
         }
 
         body { 
             background: var(--bg); 
             color: var(--text); 
+            /* FIX: Use dvh (Dynamic Viewport Height) to account for browser bars */
+            height: 100vh;
             height: 100dvh; 
             display: flex; 
             justify-content: center; 
             overflow: hidden; 
-            position: fixed;
+            position: fixed; /* Prevents accidental rubber-band scrolling */
             width: 100%;
         }
 
@@ -61,115 +54,103 @@
             display: flex; 
             flex-direction: column; 
             padding: 20px; 
+            /* FIX: Respect phone notches and bottom home-bars */
             padding-top: max(20px, env(safe-area-inset-top)); 
             padding-bottom: max(20px, env(safe-area-inset-bottom)); 
             justify-content: space-between; 
         }
 
-        /* UI Elements */
+        /* Nav */
+        .top-nav { display: flex; justify-content: space-between; align-items: flex-start; }
+        .mode-toggle { font-size: 26px; cursor: pointer; }
+        .sync-row { display: flex; align-items: center; gap: 8px; }
         .sync-indicator { font-size: 11px; font-weight: bold; color: var(--accent); letter-spacing: 1.5px; }
         .dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .update-time { font-size: 10px; color: var(--secondary-text); text-transform: uppercase; margin-top: 4px;}
 
-        /* SMOOTH CENTRIC ROTATION */
-        .resync-btn {
-            color: var(--accent);
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
+        /* Display - Flex grow allows this to shrink if space is tight */
+        .display-area { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 120px; }
+        .input-wrapper { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 5px; }
+        #val-in { font-size: 48px; font-weight: 200; color: var(--text); border: none; background: transparent; outline: none; width: 75%; caret-color: var(--accent); }
+        .result-amt { font-size: 58px; font-weight: 700; color: var(--accent); line-height: 1; word-break: break-all; }
+        .rate-ref { border-top: 1px solid var(--key-bg); padding-top: 8px; font-size: 14px; color: var(--secondary-text); margin-bottom: 10px; }
 
-        #resync-icon {
-            display: inline-block;
-            font-size: 22px;
-            line-height: 1;
-            transform-origin: center center;
-        }
+        /* Selectors */
+        .selector-box { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; position: relative; }
+        .pick-btn { flex: 1; background: var(--key-bg); height: 60px; border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; cursor: pointer; }
+        .pick-label { font-size: 9px; color: var(--secondary-text); margin-bottom: 2px; text-transform: uppercase; }
+        .swap-circle { width: 44px; height: 44px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 5; position: absolute; left: 50%; transform: translateX(-50%); color: white; border: 4px solid var(--bg); cursor: pointer; font-size: 20px; }
 
-        .spinning {
-            animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        /* Keypad - Dynamic sizing */
+        .keypad-grid { 
+            display: grid; 
+            grid-template-columns: 3fr 1fr; 
+            gap: 10px; 
+            /* Fixed height removed to allow flexible scaling */
+            height: 45%; 
+            max-height: 380px;
+            min-height: 280px;
         }
+        .numeric-zone { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .action-zone { display: grid; grid-template-rows: repeat(2, 1fr); gap: 10px; }
+        .key { background: var(--key-bg); border-radius: 20px; display: flex; justify-content: center; align-items: center; font-size: 26px; cursor: pointer; transition: 0.1s; user-select: none; }
+        .key:active { background: var(--key-active); transform: scale(0.95); }
+        .pill-ac { background: var(--accent); font-weight: 800; color: white; }
+        .pill-del { color: var(--accent); font-size: 28px; }
 
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(-360deg); }
-        }
-
-        #val-in { 
-            font-size: 52px; color: var(--text); border: none; background: transparent; 
-            outline: none; width: 70%; font-family: 'NType82';
-        }
-        .result-amt { font-size: 60px; color: var(--accent); line-height: 1; font-family: 'NType82'; }
-        
-        .keypad-grid { display: grid; grid-template-columns: 3fr 1fr; gap: 12px; height: 45%; }
-        .numeric-zone { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .key { 
-            background: var(--key-bg); border-radius: 22px; display: flex; 
-            justify-content: center; align-items: center; font-size: 32px; 
-            cursor: pointer; user-select: none;
-        }
-        .key:active { background: var(--key-active); transform: scale(0.92); }
-        .pill-ac { background: var(--accent); color: white; font-size: 22px; }
-        
-        #picker-modal { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; 
-            background: var(--bg); z-index: 1000; display: none; 
-            flex-direction: column; padding: 20px; 
-            padding-top: max(20px, env(safe-area-inset-top));
-        }
-        .country-item { padding: 18px; border-bottom: 1px solid var(--key-bg); font-family: 'NType82'; }
+        /* Picker Modal */
+        #picker-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); z-index: 1000; display: none; flex-direction: column; padding: 20px; padding-top: env(safe-area-inset-top); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .search-in { background: var(--key-bg); border: none; padding: 18px; border-radius: 20px; color: var(--text); width: 100%; margin-bottom: 15px; font-size: 18px; outline: none; }
+        .country-list { flex: 1; overflow-y: scroll; -webkit-overflow-scrolling: touch; }
+        .country-item { padding: 20px; border-bottom: 1px solid var(--key-bg); display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
     </style>
 </head>
 <body class="dark-mode">
 
 <div id="picker-modal">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="font-size: 24px;">Select Currency</h2>
-        <span onclick="closePicker()" style="font-size: 40px; cursor: pointer;">×</span>
+    <div class="modal-header">
+        <h2>Select Currency</h2>
+        <span onclick="closePicker()" style="font-size: 45px; cursor: pointer;">×</span>
     </div>
-    <input type="text" id="search-box" style="background: var(--key-bg); border: none; padding: 15px; border-radius: 15px; color: var(--text); width: 100%; margin-bottom: 10px; outline: none;" placeholder="Search currency..." oninput="filterCountries(this.value)">
-    <div id="country-list" style="flex: 1; overflow-y: auto;"></div>
+    <input type="text" id="search-box" class="search-in" placeholder="Search country..." oninput="filterCountries(this.value)">
+    <div class="country-list" id="country-list"></div>
 </div>
 
 <div class="app-container">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div style="display: flex; align-items: center; gap: 4px;">
-            <div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="dot"></span>
-                    <span class="sync-indicator">LIVE</span>
-                </div>
-                <div id="last-update" style="font-size: 10px; color: var(--secondary-text);">Syncing...</div>
+    <div class="top-nav">
+        <div class="sync-container">
+            <div class="sync-row">
+                <span class="dot"></span>
+                <span class="sync-indicator" id="sync-text">LIVE</span>
+                <span style="cursor:pointer; color:var(--accent); margin-left:5px;" onclick="fetchRates()">↻</span>
             </div>
-            <div class="resync-btn" onclick="updateRates()">
-                <span id="resync-icon">↺</span>
-            </div>
+            <div class="update-time" id="last-update">Syncing...</div>
         </div>
-        <div onclick="toggleTheme()" style="font-size: 24px; cursor: pointer;">☀️</div>
+        <div class="mode-toggle" id="mode-icon" onclick="toggleTheme()">☀️</div>
     </div>
 
-    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
-        <div style="display: flex; justify-content: space-between; align-items: baseline;">
-            <input type="text" id="val-in" value="1" readonly>
-            <div id="code-in" style="font-size: 20px; color: var(--secondary-text);">USD</div>
+    <div class="display-area">
+        <div class="input-wrapper">
+            <input type="text" id="val-in" value="1" inputmode="none" readonly>
+            <div id="code-in" style="font-weight: 700; color: var(--secondary-text);">USD</div>
         </div>
-        <div id="rate-line" style="font-size: 14px; color: var(--secondary-text); margin: 10px 0;">1 USD = ...</div>
-        <div class="result-amt" id="val-out">0.00</div>
-        <div id="code-out" style="font-size: 20px; color: var(--secondary-text);">SAR</div>
+        <div class="rate-ref" id="rate-line">1 USD = ---</div>
+        <div>
+            <div class="result-amt" id="val-out">0.00</div>
+            <div id="code-out" style="font-weight: 700; color: var(--secondary-text);">SAR</div>
+        </div>
     </div>
 
-    <div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center;">
-        <div class="key" style="flex: 1; height: 60px; font-size: 18px; flex-direction: column;" onclick="openPicker('from')">
-            <span style="font-size: 9px; opacity: 0.6;">FROM</span>
+    <div class="selector-box">
+        <div class="pick-btn" onclick="openPicker('from')">
+            <span class="pick-label">From</span>
             <span id="from-btn-text">USD</span>
         </div>
-        <div onclick="swap()" style="width: 40px; height: 40px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; font-size: 20px;">⇄</div>
-        <div class="key" style="flex: 1; height: 60px; font-size: 18px; flex-direction: column;" onclick="openPicker('to')">
-            <span style="font-size: 9px; opacity: 0.6;">TO</span>
+        <div class="swap-circle" onclick="swap()">⇅</div>
+        <div class="pick-btn" onclick="openPicker('to')">
+            <span class="pick-label">To</span>
             <span id="to-btn-text">SAR</span>
         </div>
     </div>
@@ -181,9 +162,9 @@
             <div class="key" onclick="num('1')">1</div><div class="key" onclick="num('2')">2</div><div class="key" onclick="num('3')">3</div>
             <div class="key" onclick="num('0')">0</div><div class="key" onclick="num('00')">00</div><div class="key" onclick="num('.')">.</div>
         </div>
-        <div style="display: grid; grid-template-rows: 1fr 1fr; gap: 12px;">
+        <div class="action-zone">
             <div class="key pill-ac" onclick="num('AC')">AC</div>
-            <div class="key" onclick="num('DEL')" style="color: var(--accent); font-size: 30px;">⌫</div>
+            <div class="key pill-del" onclick="num('DEL')">⌫</div>
         </div>
     </div>
 </div>
@@ -191,77 +172,102 @@
 <script>
     let ratesData = {};
     let currencyList = {};
-    let fromCode = 'usd';
-    let toCode = 'sar';
+    let fromCode = localStorage.getItem('fx-from') || 'usd';
+    let toCode = localStorage.getItem('fx-to') || 'sar';
     let activeTarget = 'from';
+    const inputEl = document.getElementById('val-in');
 
     async function init() {
-        const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.json');
-        currencyList = await res.json();
-        delete currencyList['1inch'];
-        updateRates();
+        try {
+            const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.json');
+            currencyList = await res.json();
+            fetchRates();
+        } catch(e) { document.getElementById('sync-text').innerText = "OFFLINE"; }
     }
 
-    async function updateRates() {
-        const icon = document.getElementById('resync-icon');
-        const syncLabel = document.getElementById('last-update');
-        icon.classList.add('spinning');
+    async function fetchRates() {
+        document.getElementById('sync-text').innerText = "SYNCING...";
         try {
             const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${fromCode}.json`);
             const data = await res.json();
             ratesData = data[fromCode];
-            syncLabel.innerText = `Synced: ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+            document.getElementById('last-update').innerText = `Updated: ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+            document.getElementById('sync-text').innerText = "LIVE";
             convert();
-        } catch(e) { syncLabel.innerText = "Offline"; }
-        setTimeout(() => icon.classList.remove('spinning'), 800);
+        } catch (e) { document.getElementById('sync-text').innerText = "ERROR"; }
     }
 
     function num(k) {
-        let el = document.getElementById('val-in');
-        if(k === 'AC') el.value = "0";
-        else if(k === 'DEL') el.value = el.value.length > 1 ? el.value.slice(0,-1) : "0";
-        else {
-            if(el.value === "0" && k !== '.') el.value = k;
-            else if(!(k === '.' && el.value.includes('.'))) el.value += k;
+        let val = inputEl.value;
+        if (k === 'AC') { inputEl.value = "0"; }
+        else if (k === 'DEL') {
+            inputEl.value = val.length > 1 ? val.slice(0, -1) : "0";
+        } else {
+            if (val === "0" && k !== '.') { inputEl.value = k; }
+            else { 
+                if (k === '.' && val.includes('.')) return; 
+                inputEl.value += k; 
+            }
         }
         convert();
     }
 
     function convert() {
-        const rate = ratesData[toCode];
         document.getElementById('from-btn-text').innerText = fromCode.toUpperCase();
         document.getElementById('to-btn-text').innerText = toCode.toUpperCase();
         document.getElementById('code-in').innerText = fromCode.toUpperCase();
         document.getElementById('code-out').innerText = toCode.toUpperCase();
+        const rate = ratesData[toCode];
         if(rate) {
             document.getElementById('rate-line').innerText = `1 ${fromCode.toUpperCase()} = ${rate.toFixed(4)} ${toCode.toUpperCase()}`;
-            const val = parseFloat(document.getElementById('val-in').value) || 0;
-            document.getElementById('val-out').innerText = (val * rate).toLocaleString(undefined, {minimumFractionDigits: 2});
+            const numericVal = parseFloat(inputEl.value) || 0;
+            document.getElementById('val-out').innerText = (numericVal * rate).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         }
     }
 
-    function openPicker(t) { activeTarget = t; document.getElementById('picker-modal').style.display = 'flex'; filterCountries(''); }
+    function openPicker(target) {
+        activeTarget = target;
+        document.getElementById('picker-modal').style.display = 'flex';
+        document.getElementById('search-box').value = '';
+        filterCountries('');
+    }
+
     function closePicker() { document.getElementById('picker-modal').style.display = 'none'; }
 
-    function filterCountries(q) {
-        const list = document.getElementById('country-list');
-        list.innerHTML = '';
+    function selectCurrency(code) {
+        if(activeTarget === 'from') { fromCode = code; localStorage.setItem('fx-from', code); }
+        else { toCode = code; localStorage.setItem('fx-to', code); }
+        closePicker(); 
+        fetchRates();
+    }
+
+    function filterCountries(query) {
+        const container = document.getElementById('country-list');
+        container.innerHTML = '';
+        const q = query.toLowerCase();
         Object.keys(currencyList).sort().forEach(code => {
-            if(code.includes(q.toLowerCase()) || currencyList[code].toLowerCase().includes(q.toLowerCase())) {
-                const item = document.createElement('div');
-                item.className = 'country-item';
-                item.innerHTML = `<strong>${currencyList[code]}</strong> (${code.toUpperCase()})`;
-                item.onclick = () => { 
-                    if(activeTarget === 'from') fromCode = code; else toCode = code;
-                    closePicker(); updateRates(); 
-                };
-                list.appendChild(item);
+            if (code.includes(q) || currencyList[code].toLowerCase().includes(q)) {
+                const div = document.createElement('div');
+                div.className = 'country-item';
+                div.innerHTML = `<div><div style="font-weight:600;">${currencyList[code]}</div><div style="font-size:12px;color:var(--secondary-text);">${code.toUpperCase()}</div></div><span style="color:var(--accent); font-weight:800;">→</span>`;
+                div.onclick = () => selectCurrency(code);
+                container.appendChild(div);
             }
         });
     }
 
-    function swap() { [fromCode, toCode] = [toCode, fromCode]; updateRates(); }
-    function toggleTheme() { document.body.classList.toggle('light-mode'); }
+    function swap() { 
+        [fromCode, toCode] = [toCode, fromCode]; 
+        localStorage.setItem('fx-from', fromCode);
+        localStorage.setItem('fx-to', toCode);
+        fetchRates(); 
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('light-mode');
+        document.getElementById('mode-icon').innerText = document.body.classList.contains('light-mode') ? '🌙' : '☀️';
+    }
+
     init();
 </script>
 </body>
