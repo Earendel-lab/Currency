@@ -36,3 +36,22 @@
 
 ### 🦥 Developer Note
 *I used a website-to-apk builder because I value efficiency (and okay, maybe a little laziness!). It gets the job done perfectly.* 😅
+
+---
+
+## 💎 Credits
+* **Developer**: Built with ❤️ and a bit of laziness. 🦥
+* **Rates**: Real-time data provided by [Fawaz Ahmed's API](https://github.com/fawazahmed0/currency-api). 🌐
+* **Tools**: Converted via **Website 2 APK Builder**. 🛠️
+
+---
+
+## ⚠️ Disclaimer
+* **Accuracy**: While we use live data, rates are for **informational purposes only**. Do not use for high-stakes financial trading. 📉
+* **Popup**: The "Important Notice" at startup is a limitation of the free compiler and **not** a bug or virus. 🛡️
+* **Privacy**: This app **does not** collect any personal data. All settings are stored locally on your device. 🔒
+
+---
+
+### 📄 License
+This project is open-source. Feel free to fork, tweak, and make it your own!
