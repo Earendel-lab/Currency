@@ -28,7 +28,6 @@
 
         * { 
             margin: 0; padding: 0; box-sizing: border-box; 
-            /* GLOBAL SERIF FONT */
             font-family: "Times New Roman", Times, Baskerville, Georgia, serif; 
             -webkit-tap-highlight-color: transparent; 
         }
@@ -45,25 +44,278 @@
             display: flex; flex-direction: column; padding: 20px; 
             padding-top: max(20px, env(safe-area-inset-top)); 
             padding-bottom: max(20px, env(safe-area-inset-bottom)); 
-            justify-content: space-between; 
         }
 
-        .top-nav { display: flex; justify-content: space-between; align-items: center; height: 44px; }
-        .sync-container { display: flex; align-items: center; gap: 6px; height: 100%; }
-        .sync-btn { 
-            cursor: pointer; color: var(--accent); font-size: 24px; 
+        /* ULTIMATE SYNC FIX - SVG DRIVEN */
+        .top-nav { display: flex; justify-content: space-between; align-items: center; height: 44px; margin-bottom: 10px; }
+        .sync-container { display: flex; align-items: center; gap: 10px; height: 100%; }
+        
+        .sync-btn-wrapper {
+            width: 32px; height: 32px;
             display: flex; align-items: center; justify-content: center;
-            width: 28px; height: 28px; transition: transform 0.6s ease-in-out;
+            cursor: pointer;
         }
-        .sync-btn.spinning { transform: rotate(360deg); }
-        .update-time { font-size: 11px; color: var(--secondary-text); text-transform: uppercase; display: flex; align-items: center; height: 100%; }
+
+        .sync-svg {
+            width: 22px; height: 22px;
+            fill: none; stroke: var(--accent);
+            stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Perfectly centered rotation */
+        .spinning { transform: rotate(360deg); }
+
+        .update-time { 
+            font-size: 11px; color: var(--secondary-text); 
+            text-transform: uppercase; font-family: sans-serif;
+            letter-spacing: 0.5px;
+            line-height: 32px; /* Matches wrapper height */
+        }
 
         .mode-toggle { cursor: pointer; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; }
-        .icon-svg { width: 22px; height: 22px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .icon-svg { width: 22px; height: 22px; stroke: var(--text); fill: none; stroke-width: 2; }
 
-        .display-area { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .input-wrapper { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+        /* DISPLAY AREA */
+        .display-area { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 180px; }
+        .input-wrapper { display: flex; align-items: center; justify-content: space-between; height: 70px; }
+        
         #val-in { font-size: 52px; font-weight: 300; color: var(--text); border: none; background: transparent; outline: none; width: 75%; }
+        .result-amt { font-size: 60px; font-weight: 200; color: var(--accent); width: 75%; overflow: hidden; }
+        .code-tag { font-family: sans-serif; font-weight: 700; color: var(--secondary-text); font-size: 18px; }
+        .rate-ref { border-top: 1px solid var(--key-bg); padding-top: 8px; font-size: 15px; color: var(--secondary-text); margin-bottom: 15px; }
+
+        /* SELECTOR */
+        .selector-box { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; position: relative; height: 64px; }
+        .pick-btn { flex: 1; background: var(--key-bg); height: 100%; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+        .pick-label { font-size: 10px; color: var(--secondary-text); text-transform: uppercase; font-family: sans-serif; }
+        
+        .swap-circle { 
+            width: 44px; height: 44px; background: var(--accent); border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; z-index: 5; 
+            position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); 
+            color: white; border: 4px solid var(--bg); cursor: pointer;
+            transition: transform 0.4s ease;
+        }
+        .swap-circle.rotate { transform: translate(-50%, -50%) rotate(180deg); }
+
+        /* KEYPAD - ROUND PILLS */
+        .keypad-grid { 
+            display: grid; 
+            grid-template-columns: 2.8fr 1.2fr; 
+            gap: 12px; 
+            height: 360px; 
+        }
+        .numeric-zone { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .action-zone { display: flex; flex-direction: column; gap: 12px; }
+        
+        .key { 
+            background: var(--key-bg); border-radius: 100px; display: flex; 
+            justify-content: center; align-items: center; font-size: 30px; 
+            cursor: pointer; user-select: none;
+            font-family: "Times New Roman" !important; 
+        }
+        .numeric-zone .key { aspect-ratio: 1/1; }
+        .action-zone .key { flex: 1; border-radius: 100px; width: 100%; }
+
+        .key:active { background: var(--key-active); transform: scale(0.95); transition: 0.1s; }
+        .pill-ac { background: var(--accent); color: white; font-weight: 700; font-size: 24px; }
+        .pill-del { color: var(--accent); font-size: 30px; }
+
+        /* MODAL */
+        #picker-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); z-index: 1000; display: none; flex-direction: column; padding: 20px; padding-top: env(safe-area-inset-top); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-family: sans-serif; }
+        .search-in { background: var(--key-bg); border: none; padding: 18px; border-radius: 20px; color: var(--text); width: 100%; margin-bottom: 15px; font-size: 18px; outline: none; font-family: sans-serif; }
+        .country-list { flex: 1; overflow-y: scroll; }
+        .country-item { padding: 20px; border-bottom: 1px solid var(--key-bg); display: flex; justify-content: space-between; align-items: center; font-family: sans-serif; }
+    </style>
+</head>
+<body>
+
+<div id="picker-modal">
+    <div class="modal-header">
+        <h2>Select Currency</h2>
+        <span onclick="closePicker()" style="font-size: 45px; cursor: pointer;">×</span>
+    </div>
+    <input type="text" id="search-box" class="search-in" placeholder="Search country..." oninput="filterCountries(this.value)">
+    <div class="country-list" id="country-list"></div>
+</div>
+
+<div class="app-container">
+    <div class="top-nav">
+        <div class="sync-container" onclick="fetchRates()">
+            <div class="sync-btn-wrapper">
+                <svg class="sync-svg" id="sync-icon" viewBox="0 0 24 24">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+            </div>
+            <div class="update-time" id="last-update">SYNCING...</div>
+        </div>
+        <div class="mode-toggle" id="mode-icon" onclick="toggleTheme()"></div>
+    </div>
+
+    <div class="display-area">
+        <div class="input-wrapper">
+            <input type="text" id="val-in" value="1" readonly>
+            <div id="code-in" class="code-tag">USD</div>
+        </div>
+        <div class="rate-ref" id="rate-line">1 USD = ---</div>
+        
+        <div class="input-wrapper">
+            <div class="result-amt" id="val-out">0.00</div>
+            <div id="code-out" class="code-tag">SAR</div>
+        </div>
+    </div>
+
+    <div class="selector-box">
+        <div class="pick-btn" onclick="openPicker('from')">
+            <span class="pick-label">From</span>
+            <span id="from-btn-text">USD</span>
+        </div>
+        <div class="swap-circle" id="swap-btn" onclick="swap()">⇅</div>
+        <div class="pick-btn" onclick="openPicker('to')">
+            <span class="pick-label">To</span>
+            <span id="to-btn-text">SAR</span>
+        </div>
+    </div>
+
+    <div class="keypad-grid">
+        <div class="numeric-zone">
+            <div class="key" onclick="num('7')">7</div><div class="key" onclick="num('8')">8</div><div class="key" onclick="num('9')">9</div>
+            <div class="key" onclick="num('4')">4</div><div class="key" onclick="num('5')">5</div><div class="key" onclick="num('6')">6</div>
+            <div class="key" onclick="num('1')">1</div><div class="key" onclick="num('2')">2</div><div class="key" onclick="num('3')">3</div>
+            <div class="key" onclick="num('0')">0</div><div class="key" onclick="num('00')">00</div><div class="key" onclick="num('.')">.</div>
+        </div>
+        <div class="action-zone">
+            <div class="key pill-ac" onclick="num('AC')">AC</div>
+            <div class="key pill-del" onclick="num('DEL')">⌫</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let ratesData = {};
+    let currencyList = {};
+    let fromCode = localStorage.getItem('fx-from') || 'usd';
+    let toCode = localStorage.getItem('fx-to') || 'sar';
+    let activeTarget = 'from';
+    const inputEl = document.getElementById('val-in');
+    const outputEl = document.getElementById('val-out');
+
+    const sunIcon = `<svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+    const moonIcon = `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+
+    function updateThemeIcon() {
+        const isLight = document.body.classList.contains('light-mode');
+        document.getElementById('mode-icon').innerHTML = isLight ? moonIcon : sunIcon;
+    }
+
+    function adjustFontSize() {
+        const length = inputEl.value.length;
+        inputEl.style.fontSize = length > 12 ? '28px' : length > 8 ? '38px' : '52px';
+        const outLength = outputEl.innerText.length;
+        outputEl.style.fontSize = outLength > 12 ? '32px' : outLength > 8 ? '45px' : '60px';
+    }
+
+    async function init() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') document.body.classList.add('light-mode');
+        updateThemeIcon();
+        try {
+            const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.json');
+            currencyList = await res.json();
+            fetchRates();
+        } catch(e) { document.getElementById('last-update').innerText = "OFFLINE"; }
+    }
+
+    async function fetchRates() {
+        const icon = document.getElementById('sync-icon');
+        icon.classList.add('spinning');
+        document.getElementById('last-update').innerText = "SYNCING...";
+        try {
+            const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${fromCode}.json`);
+            const data = await res.json();
+            ratesData = data[fromCode];
+            document.getElementById('last-update').innerText = `${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+            convert();
+        } catch (e) { document.getElementById('last-update').innerText = "ERROR"; }
+        setTimeout(() => icon.classList.remove('spinning'), 800);
+    }
+
+    function num(k) {
+        let val = inputEl.value;
+        if (k === 'AC') inputEl.value = "0";
+        else if (k === 'DEL') inputEl.value = val.length > 1 ? val.slice(0, -1) : "0";
+        else {
+            if (val === "0" && k !== '.') inputEl.value = k;
+            else if (val.length < 15) inputEl.value += k;
+        }
+        convert();
+    }
+
+    function convert() {
+        document.getElementById('from-btn-text').innerText = fromCode.toUpperCase();
+        document.getElementById('to-btn-text').innerText = toCode.toUpperCase();
+        document.getElementById('code-in').innerText = fromCode.toUpperCase();
+        document.getElementById('code-out').innerText = toCode.toUpperCase();
+        const rate = ratesData[toCode];
+        if(rate) {
+            document.getElementById('rate-line').innerText = `1 ${fromCode.toUpperCase()} = ${rate.toFixed(4)} ${toCode.toUpperCase()}`;
+            outputEl.innerText = (parseFloat(inputEl.value) * rate).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        adjustFontSize();
+    }
+
+    function openPicker(target) {
+        activeTarget = target;
+        document.getElementById('picker-modal').style.display = 'flex';
+        filterCountries('');
+    }
+
+    function closePicker() { document.getElementById('picker-modal').style.display = 'none'; }
+
+    function selectCurrency(code) {
+        if(activeTarget === 'from') { fromCode = code; localStorage.setItem('fx-from', code); }
+        else { toCode = code; localStorage.setItem('fx-to', code); }
+        closePicker(); fetchRates();
+    }
+
+    function filterCountries(query) {
+        const container = document.getElementById('country-list');
+        container.innerHTML = '';
+        const q = query.toLowerCase();
+        Object.keys(currencyList).sort().forEach(code => {
+            if (code.includes(q) || currencyList[code].toLowerCase().includes(q)) {
+                const div = document.createElement('div');
+                div.className = 'country-item';
+                div.innerHTML = `<div><div style="font-weight:600;">${currencyList[code]}</div><div style="font-size:12px;color:var(--secondary-text);">${code.toUpperCase()}</div></div><span style="color:var(--accent); font-weight:800;">→</span>`;
+                div.onclick = () => selectCurrency(code);
+                container.appendChild(div);
+            }
+        });
+    }
+
+    function swap() { 
+        const btn = document.getElementById('swap-btn');
+        btn.classList.add('rotate');
+        setTimeout(() => btn.classList.remove('rotate'), 400);
+        [fromCode, toCode] = [toCode, fromCode]; 
+        localStorage.setItem('fx-from', fromCode);
+        localStorage.setItem('fx-to', toCode);
+        fetchRates(); 
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('light-mode');
+        localStorage.setItem('theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+        updateThemeIcon();
+    }
+
+    init();
+</script>
+</body>
+</html>
         .result-amt { font-size: 62px; font-weight: 200; color: var(--accent); line-height: 1; word-break: break-all; width: 75%; }
         .rate-ref { border-top: 1px solid var(--key-bg); padding-top: 8px; font-size: 15px; color: var(--secondary-text); margin-bottom: 12px; }
 
