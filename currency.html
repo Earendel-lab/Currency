@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Currency</title>
+    <style>
+        :root {
+            --bg: #000000;
+            --surface: #1C1C1E;
+            --accent: #D32F2F; 
+            --text: #FFFFFF;
+            --secondary-text: #8E8E93;
+            --key-bg: #1C1C1E;
+            --key-active: #3A3A3C;
+        }
+
+        body.light-mode {
+            --bg: #F2F2F7;
+            --surface: #FFFFFF;
+            --text: #000000;
+            --secondary-text: #636366;
+            --key-bg: #E5E5EA;
+            --key-active: #C7C7CC;
+        }
+
+        * { 
+            margin: 0; padding: 0; box-sizing: border-box; 
+            font-family: -apple-system, BlinkMacSystemFont, serif; 
+            -webkit-tap-highlight-color: transparent; 
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        body { 
+            background: var(--bg); color: var(--text); 
+            height: 100dvh; display: flex; justify-content: center; 
+            overflow: hidden; position: fixed; width: 100%;
+        }
+
+        .app-container { 
+            width: 100vw; max-width: 450px; height: 100%;
+            display: flex; flex-direction: column; padding: 20px; 
+            padding-top: max(20px, env(safe-area-inset-top)); 
+            padding-bottom: max(20px, env(safe-area-inset-bottom)); 
+            justify-content: space-between; 
+        }
+
+        /* Nav & Sync Fixes */
+        .top-nav { display: flex; justify-content: space-between; align-items: center; height: 44px; }
+        .sync-container { display: flex; align-items: center; gap: 12px; }
+        .sync-btn { 
+            cursor: pointer; color: var(--accent); font-size: 26px; 
+            display: flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .sync-btn.spinning { transform: rotate(360deg); }
+        .update-time { font-size: 10px; color: var(--secondary-text); text-transform: uppercase; line-height: 1; }
+
+        .mode-toggle { 
+            cursor: pointer; display: flex; align-items: center; justify-content: center; 
+            width: 44px; height: 44px; 
+        }
+        
+        /* Icon Visibility Fix */
+        .icon-svg { 
+            width: 24px; height: 24px; 
+            stroke: var(--text); /* Forces visibility in dark/light mode */
+            fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; 
+            transition: stroke 0.3s ease;
+        }
+
+        /* Display Area */
+        .display-area { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .input-wrapper { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+        #val-in { font-size: 48px; font-weight: 200; color: var(--text); border: none; background: transparent; outline: none; width: 75%; }
+        .result-amt { font-size: 58px; font-weight: 100; color: var(--accent); line-height: 1; word-break: break-all; width: 75%; }
+        .rate-ref { border-top: 1px solid var(--key-bg); padding-top: 8px; font-size: 14px; color: var(--secondary-text); margin-bottom: 12px; }
+
+        /* Selectors & Swap Fix */
+        .selector-box { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; position: relative; height: 60px; }
+        .pick-btn { flex: 1; background: var(--key-bg); height: 100%; border-radius: 35px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; cursor: pointer; }
+        .pick-label { font-size: 9px; color: var(--secondary-text); margin-bottom: 2px; text-transform: uppercase; }
+        
+        .swap-circle { 
+            width: 46px; height: 46px; background: var(--accent); border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; z-index: 5; 
+            position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); 
+            color: white; border: 4px solid var(--bg); cursor: pointer; font-size: 20px;
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.3s, border-color 0.3s;
+        }
+        .swap-circle:active { transform: translate(-50%, -50%) rotate(180deg) scale(1.1); }
+
+        /* Keypad */
+        .keypad-grid { 
+            display: grid; grid-template-columns: 3.6fr 0.9fr; gap: 12px; 
+            height: 45%; max-height: 380px; min-height: 280px;
+        }
+        .numeric-zone { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .action-zone { display: grid; grid-template-rows: repeat(2, 1fr); gap: 12px; }
+        .key { background: var(--key-bg); border-radius: 100px; display: flex; justify-content: center; align-items: center; font-size: 38px; cursor: pointer; user-select: none; }
+        .key:active { background: var(--key-active); transform: scale(0.92); transition: 0.1s; }
+        .pill-ac { background: var(--accent); color: white; font-size: 26px; }
+        .pill-del { color: var(--accent); font-size: 24px; }
+
+        /* Modal */
+        #picker-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); z-index: 1000; display: none; flex-direction: column; padding: 20px; padding-top: env(safe-area-inset-top); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .search-in { background: var(--key-bg); border: none; padding: 18px; border-radius: 20px; color: var(--text); width: 100%; margin-bottom: 15px; font-size: 18px; outline: none; }
+        .country-list { flex: 1; overflow-y: scroll; -webkit-overflow-scrolling: touch; }
+        .country-item { padding: 20px; border-bottom: 1px solid var(--key-bg); display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="picker-modal">
+    <div class="modal-header">
+        <h2>Select Currency</h2>
+        <span onclick="closePicker()" style="font-size: 45px; cursor: pointer;">×</span>
+    </div>
+    <input type="text" id="search-box" class="search-in" placeholder="Search country..." oninput="filterCountries(this.value)">
+    <div class="country-list" id="country-list"></div>
+</div>
+
+<div class="app-container">
+    <div class="top-nav">
+        <div class="sync-container">
+            <span class="sync-btn" id="sync-icon" onclick="fetchRates()">↻</span>
+            <div class="update-time" id="last-update">Syncing...</div>
+        </div>
+        <div class="mode-toggle" id="mode-icon" onclick="toggleTheme()"></div>
+    </div>
+
+    <div class="display-area">
+        <div class="input-wrapper">
+            <input type="text" id="val-in" value="1" inputmode="none" readonly>
+            <div id="code-in" style="font-weight: 700; color: var(--secondary-text);">USD</div>
+        </div>
+        <div class="rate-ref" id="rate-line">1 USD = ---</div>
+        
+        <div class="input-wrapper">
+            <div class="result-amt" id="val-out">0.00</div>
+            <div id="code-out" style="font-weight: 700; color: var(--secondary-text);">SAR</div>
+        </div>
+    </div>
+
+    <div class="selector-box">
+        <div class="pick-btn" onclick="openPicker('from')">
+            <span class="pick-label">From</span>
+            <span id="from-btn-text">USD</span>
+        </div>
+        <div class="swap-circle" onclick="swap()">⇅</div>
+        <div class="pick-btn" onclick="openPicker('to')">
+            <span class="pick-label">To</span>
+            <span id="to-btn-text">SAR</span>
+        </div>
+    </div>
+
+    <div class="keypad-grid">
+        <div class="numeric-zone">
+            <div class="key" onclick="num('7')">7</div><div class="key" onclick="num('8')">8</div><div class="key" onclick="num('9')">9</div>
+            <div class="key" onclick="num('4')">4</div><div class="key" onclick="num('5')">5</div><div class="key" onclick="num('6')">6</div>
+            <div class="key" onclick="num('1')">1</div><div class="key" onclick="num('2')">2</div><div class="key" onclick="num('3')">3</div>
+            <div class="key" onclick="num('0')">0</div><div class="key" onclick="num('00')">00</div><div class="key" onclick="num('.')">.</div>
+        </div>
+        <div class="action-zone">
+            <div class="key pill-ac" onclick="num('AC')">AC</div>
+            <div class="key pill-del" onclick="num('DEL')">⌫</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let ratesData = {};
+    let currencyList = {};
+    let fromCode = localStorage.getItem('fx-from') || 'usd';
+    let toCode = localStorage.getItem('fx-to') || 'sar';
+    let activeTarget = 'from';
+    const inputEl = document.getElementById('val-in');
+
+    const sunIcon = `<svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+    const moonIcon = `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+
+    function updateThemeIcon() {
+        const isLight = document.body.classList.contains('light-mode');
+        document.getElementById('mode-icon').innerHTML = isLight ? moonIcon : sunIcon;
+    }
+
+    async function init() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') document.body.classList.add('light-mode');
+        updateThemeIcon();
+
+        try {
+            const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.json');
+            currencyList = await res.json();
+            fetchRates();
+        } catch(e) { document.getElementById('last-update').innerText = "OFFLINE"; }
+    }
+
+    async function fetchRates() {
+        const icon = document.getElementById('sync-icon');
+        icon.classList.add('spinning');
+        document.getElementById('last-update').innerText = "Syncing...";
+        try {
+            const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${fromCode}.json`);
+            const data = await res.json();
+            ratesData = data[fromCode];
+            document.getElementById('last-update').innerText = `${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+            convert();
+        } catch (e) { document.getElementById('last-update').innerText = "ERROR"; }
+        setTimeout(() => icon.classList.remove('spinning'), 600);
+    }
+
+    function num(k) {
+        let val = inputEl.value;
+        if (k === 'AC') inputEl.value = "0";
+        else if (k === 'DEL') inputEl.value = val.length > 1 ? val.slice(0, -1) : "0";
+        else {
+            if (val === "0" && k !== '.') inputEl.value = k;
+            else { 
+                if (k === '.' && val.includes('.')) return; 
+                inputEl.value += k; 
+            }
+        }
+        convert();
+    }
+
+    function convert() {
+        document.getElementById('from-btn-text').innerText = fromCode.toUpperCase();
+        document.getElementById('to-btn-text').innerText = toCode.toUpperCase();
+        document.getElementById('code-in').innerText = fromCode.toUpperCase();
+        document.getElementById('code-out').innerText = toCode.toUpperCase();
+        const rate = ratesData[toCode];
+        if(rate) {
+            document.getElementById('rate-line').innerText = `1 ${fromCode.toUpperCase()} = ${rate.toFixed(4)} ${toCode.toUpperCase()}`;
+            const numericVal = parseFloat(inputEl.value) || 0;
+            document.getElementById('val-out').innerText = (numericVal * rate).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+    }
+
+    function openPicker(target) {
+        activeTarget = target;
+        document.getElementById('picker-modal').style.display = 'flex';
+        document.getElementById('search-box').value = '';
+        filterCountries('');
+    }
+
+    function closePicker() { document.getElementById('picker-modal').style.display = 'none'; }
+
+    function selectCurrency(code) {
+        if(activeTarget === 'from') { fromCode = code; localStorage.setItem('fx-from', code); }
+        else { toCode = code; localStorage.setItem('fx-to', code); }
+        closePicker(); 
+        fetchRates();
+    }
+
+    function filterCountries(query) {
+        const container = document.getElementById('country-list');
+        container.innerHTML = '';
+        const q = query.toLowerCase();
+        Object.keys(currencyList).sort().forEach(code => {
+            if (code.includes(q) || currencyList[code].toLowerCase().includes(q)) {
+                const div = document.createElement('div');
+                div.className = 'country-item';
+                div.innerHTML = `<div><div style="font-weight:600;">${currencyList[code]}</div><div style="font-size:12px;color:var(--secondary-text);">${code.toUpperCase()}</div></div><span style="color:var(--accent); font-weight:800;">→</span>`;
+                div.onclick = () => selectCurrency(code);
+                container.appendChild(div);
+            }
+        });
+    }
+
+    function swap() { 
+        [fromCode, toCode] = [toCode, fromCode]; 
+        localStorage.setItem('fx-from', fromCode);
+        localStorage.setItem('fx-to', toCode);
+        fetchRates(); 
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('light-mode');
+        const isLight = document.body.classList.contains('light-mode');
+        localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        updateThemeIcon();
+    }
+
+    init();
+</script>
+</body>
+</html>
