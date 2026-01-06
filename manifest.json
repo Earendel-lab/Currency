@@ -1,21 +1,25 @@
 {
-  "name": "Currency Converter",
-  "short_name": "Currency",
-  "description": "Quick currency conversion anytime, anywhere.",
-  "start_url": "/Currency/",
-  "display": "standalone",
   "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "curency.pages",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "curency.pages",
+  "start_url": "https://curency.pages.dev/",
   "theme_color": "#000000",
   "icons": [
     {
-      "src": "/Currency/d1e9cc50-00d5-448f-8756-ef52bef4c8f4.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/Currency/d1e9cc50-00d5-448f-8756-ef52bef4c8f4.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "https://curency.pages.dev/favicon.ico",
+      "type": "image/x-icon",
+      "isSquare": false,
+      "isPng": false,
+      "isWebp": false,
+      "isJpg": false,
+      "width": 0,
+      "is512x512": false,
+      "is256x256": false,
+      "is192x192": false
     }
   ]
 }
