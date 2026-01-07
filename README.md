@@ -1,4 +1,4 @@
-# 📱 **Currency**
+# 📱 **[Currency](https://curency.pages.dev/)**
 
 > **Simple. Minimal. Precise.** A currency converter inspired by the structural aesthetics of **Nothing OS**.
 
