@@ -13,7 +13,7 @@
 * **Quick Swap**: One-tap **currency reversal** (⇅) with smooth **rotation animations**. 
 * **Visual Icons**: Professional **SVG icons** used throughout for a sharp, clean look. 
 * **Dual Themes**: Instant toggle between **Dark Mode** and **Light Mode**. 
-
+<img width="987" height="1029" alt="Screenshot_20260108-111607 (1) (1) (1)" src="https://github.com/user-attachments/assets/9973e5c5-546d-4e0d-9287-d91d867c0bdc" />
 ---
 
 ## 🆕 **Changelog**
