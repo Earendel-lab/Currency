@@ -49,7 +49,6 @@
             padding-bottom: max(20px, env(safe-area-inset-bottom)); 
         }
 
-        /* ULTIMATE SYNC FIX - SVG DRIVEN */
         .top-nav { display: flex; justify-content: space-between; align-items: center; height: 44px; margin-bottom: 10px; }
         .sync-container { display: flex; align-items: center; gap: 10px; height: 100%; }
         
@@ -66,20 +65,18 @@
             transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* Perfectly centered rotation */
         .spinning { transform: rotate(360deg); }
 
         .update-time { 
             font-size: 11px; color: var(--secondary-text); 
             text-transform: uppercase; font-family: sans-serif;
             letter-spacing: 0.5px;
-            line-height: 32px; /* Matches wrapper height */
+            line-height: 32px; 
         }
 
         .mode-toggle { cursor: pointer; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; }
         .icon-svg { width: 22px; height: 22px; stroke: var(--text); fill: none; stroke-width: 2; }
 
-        /* DISPLAY AREA */
         .display-area { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 180px; }
         .input-wrapper { display: flex; align-items: center; justify-content: space-between; height: 70px; }
         
@@ -88,7 +85,6 @@
         .code-tag { font-family: sans-serif; font-weight: 700; color: var(--secondary-text); font-size: 18px; }
         .rate-ref { border-top: 1px solid var(--key-bg); padding-top: 8px; font-size: 15px; color: var(--secondary-text); margin-bottom: 15px; }
 
-        /* SELECTOR */
         .selector-box { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; position: relative; height: 64px; }
         .pick-btn { flex: 1; background: var(--key-bg); height: 100%; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
         .pick-label { font-size: 10px; color: var(--secondary-text); text-transform: uppercase; font-family: sans-serif; }
@@ -102,7 +98,6 @@
         }
         .swap-circle.rotate { transform: translate(-50%, -50%) rotate(180deg); }
 
-        /* KEYPAD - ROUND PILLS */
         .keypad-grid { 
             display: grid; 
             grid-template-columns: 2.8fr 1.2fr; 
@@ -125,7 +120,6 @@
         .pill-ac { background: var(--accent); color: white; font-weight: 700; font-size: 24px; }
         .pill-del { color: var(--accent); font-size: 30px; }
 
-        /* MODAL */
         #picker-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); z-index: 1000; display: none; flex-direction: column; padding: 20px; padding-top: env(safe-area-inset-top); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-family: sans-serif; }
         .search-in { background: var(--key-bg); border: none; padding: 18px; border-radius: 20px; color: var(--text); width: 100%; margin-bottom: 15px; font-size: 18px; outline: none; font-family: sans-serif; }
@@ -198,11 +192,12 @@
 </div>
 
 <script>
-    let ratesData = {};
-    let currencyList = {};
+    let usdRates = JSON.parse(localStorage.getItem('fx-usd-rates')) || {};
+    let currencyList = JSON.parse(localStorage.getItem('fx-list')) || {};
     let fromCode = localStorage.getItem('fx-from') || 'usd';
     let toCode = localStorage.getItem('fx-to') || 'sar';
     let activeTarget = 'from';
+    
     const inputEl = document.getElementById('val-in');
     const outputEl = document.getElementById('val-out');
 
@@ -225,24 +220,33 @@
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'light') document.body.classList.add('light-mode');
         updateThemeIcon();
+        
         try {
             const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.json');
             currencyList = await res.json();
-            fetchRates();
-        } catch(e) { document.getElementById('last-update').innerText = "OFFLINE"; }
+            localStorage.setItem('fx-list', JSON.stringify(currencyList));
+        } catch(e) {}
+        
+        fetchRates();
     }
 
     async function fetchRates() {
         const icon = document.getElementById('sync-icon');
         icon.classList.add('spinning');
         document.getElementById('last-update').innerText = "SYNCING...";
+
         try {
-            const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${fromCode}.json`);
+            // Fetch USD rates (bridging currency for ALL countries)
+            const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json`);
             const data = await res.json();
-            ratesData = data[fromCode];
-            document.getElementById('last-update').innerText = `${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
-            convert();
-        } catch (e) { document.getElementById('last-update').innerText = "ERROR"; }
+            usdRates = data.usd;
+            localStorage.setItem('fx-usd-rates', JSON.stringify(usdRates));
+            localStorage.setItem('fx-last-sync-time', new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+        } catch (e) {}
+        
+        const lastSync = localStorage.getItem('fx-last-sync-time');
+        document.getElementById('last-update').innerText = lastSync || "---";
+        convert();
         setTimeout(() => icon.classList.remove('spinning'), 800);
     }
 
@@ -262,10 +266,16 @@
         document.getElementById('to-btn-text').innerText = toCode.toUpperCase();
         document.getElementById('code-in').innerText = fromCode.toUpperCase();
         document.getElementById('code-out').innerText = toCode.toUpperCase();
-        const rate = ratesData[toCode];
-        if(rate) {
-            document.getElementById('rate-line').innerText = `1 ${fromCode.toUpperCase()} = ${rate.toFixed(4)} ${toCode.toUpperCase()}`;
-            outputEl.innerText = (parseFloat(inputEl.value) * rate).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        // Logical Cross-rate calculation using USD base
+        // Formula: (Target Rate / Source Rate)
+        const rateFrom = fromCode === 'usd' ? 1 : usdRates[fromCode];
+        const rateTo = toCode === 'usd' ? 1 : usdRates[toCode];
+
+        if(rateFrom && rateTo) {
+            const finalRate = rateTo / rateFrom;
+            document.getElementById('rate-line').innerText = `1 ${fromCode.toUpperCase()} = ${finalRate.toFixed(4)} ${toCode.toUpperCase()}`;
+            outputEl.innerText = (parseFloat(inputEl.value) * finalRate).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         }
         adjustFontSize();
     }
@@ -281,7 +291,7 @@
     function selectCurrency(code) {
         if(activeTarget === 'from') { fromCode = code; localStorage.setItem('fx-from', code); }
         else { toCode = code; localStorage.setItem('fx-to', code); }
-        closePicker(); fetchRates();
+        closePicker(); convert();
     }
 
     function filterCountries(query) {
@@ -306,7 +316,7 @@
         [fromCode, toCode] = [toCode, fromCode]; 
         localStorage.setItem('fx-from', fromCode);
         localStorage.setItem('fx-to', toCode);
-        fetchRates(); 
+        convert(); 
     }
 
     function toggleTheme() {
