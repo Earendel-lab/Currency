@@ -1,317 +1,331 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+   <link rel="manifest" href="/Currency/manifest.json">
+<meta name="theme-color" content="#000000">
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DJ | Earendel Lab</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Space+Grotesk:wght@700;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Currency</title>
     <style>
         :root {
-            --accent: #6366f1;
-            --terminal: #07C12F;
-            --glass: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --text-main: #ffffff;
-            --text-sub: #94a3b8;
-            --radius: 32px;
+            --bg: #000000;
+            --surface: #1C1C1E;
+            --accent: #D71921; 
+            --text: #FFFFFF;
+            --secondary-text: #8E8E93;
+            --key-bg: #1C1C1E;
+            --key-active: #3A3A3C;
         }
 
-        /* --- SELECTION --- */
-        ::selection { background: var(--terminal); color: #000; }
-
-        /* --- CORE SETUP --- */
-        html { scroll-behavior: smooth; }
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background: #000; color: var(--text-main); font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; }
-
-        /* --- STICKY CURSOR CSS --- */
-        #cursor-dot {
-            position: fixed; top: 0; left: 0; width: 6px; height: 6px; 
-            background: #fff; border-radius: 50%; pointer-events: none; z-index: 10000;
-            transition: opacity 0.3s ease;
+        body.light-mode {
+            --bg: #F2F2F7;
+            --surface: #FFFFFF;
+            --text: #000000;
+            --secondary-text: #636366;
+            --key-bg: #E5E5EA;
+            --key-active: #C7C7CC;
         }
-        #cursor-ring {
-            position: fixed; top: 0; left: 0; width: 34px; height: 34px; 
-            background: transparent; border: 1.5px solid rgba(255,255,255,0.4);
-            border-radius: 50%; pointer-events: none; z-index: 9999;
-            transition: width 0.4s cubic-bezier(0.23, 1, 0.32, 1), 
-                        height 0.4s cubic-bezier(0.23, 1, 0.32, 1), 
-                        margin 0.4s cubic-bezier(0.23, 1, 0.32, 1),
-                        border-color 0.5s ease, 
-                        background 0.5s ease;
+
+        * { 
+            margin: 0; padding: 0; box-sizing: border-box; 
+            font-family: "Times New Roman", Times, Baskerville, Georgia, serif; 
+            -webkit-tap-highlight-color: transparent; 
         }
-        @media (hover: none) { #cursor-dot, #cursor-ring { display: none; } * { cursor: auto !important; } }
-        @media (hover: hover) { * { cursor: none !important; } }
 
-        #bg-canvas { position: fixed; top: 0; left: 0; z-index: -1; width: 100vw; height: 100vh; filter: blur(45px); }
-
-        /* --- NAVIGATION --- */
-        nav {
-            position: fixed; top: 0; width: 100%; height: 70px; z-index: 1000;
-            display: flex; justify-content: center; align-items: center;
-            background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border);
+        body { 
+            background: var(--bg); color: var(--text); 
+            height: 100dvh; display: flex; justify-content: center; 
+            overflow: hidden; position: fixed; width: 100%;
+            transition: background 0.3s ease;
         }
-        .nav-container { width: 100%; max-width: 1200px; display: flex; justify-content: space-between; padding: 0 6%; align-items: center; }
-        .nav-item { color: #fff; text-decoration: none; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; opacity: 0.5; transition: 0.3s; }
-        .nav-item:hover { opacity: 1; color: var(--accent); }
 
-        /* --- TITLES --- */
-        h1, h2 { font-family: 'Space Grotesk'; font-weight: 900; background: linear-gradient(135deg, #ffffff 0%, #94a3b8 50%, #ffffff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-size: 200% auto; animation: shine 6s linear infinite; }
-        @keyframes shine { to { background-position: 200% center; } }
-        h1 { font-size: clamp(3.5rem, 15vw, 9rem); line-height: 0.85; letter-spacing: -0.05em; margin-bottom: 30px; }
-        h2 { font-size: clamp(2.2rem, 8vw, 4rem); margin-bottom: 40px; }
+        .app-container { 
+            width: 100vw; max-width: 450px; height: 100%;
+            display: flex; flex-direction: column; padding: 20px; 
+            padding-top: max(20px, env(safe-area-inset-top)); 
+            padding-bottom: max(20px, env(safe-area-inset-bottom)); 
+        }
 
-        /* --- SECTIONS --- */
-        section { min-height: 100vh; padding: 140px 6% 80px; display: flex; flex-direction: column; justify-content: center; position: relative; }
-        .container { width: 100%; max-width: 1100px; margin: 0 auto; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+        .top-nav { display: flex; justify-content: space-between; align-items: center; height: 44px; margin-bottom: 10px; }
+        .sync-container { display: flex; align-items: center; gap: 10px; height: 100%; }
         
-        /* --- GLASS CARDS (CORE SCOPE) --- */
-        .glass-card { background: var(--glass); border: 1px solid var(--glass-border); padding: 50px 40px; border-radius: var(--radius); backdrop-filter: blur(10px); }
-        .tab-item h4 { color: var(--terminal); font-size: 1.2rem; margin-bottom: 12px; font-family: 'Space Grotesk'; }
-        .tab-item p { color: var(--text-sub); line-height: 1.7; font-size: 0.95rem; }
-
-        /* --- LAB STACK (UPSIZED) --- */
-        .tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 24px; }
-        .tech-item { 
-            background: var(--glass); border: 1px solid var(--glass-border); 
-            padding: 45px 25px; border-radius: 28px; text-align: center; 
-            transition: 0.3s ease;
+        .sync-btn-wrapper {
+            width: 32px; height: 32px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
         }
-        .tech-item i { font-size: 3.2rem; display: block; margin-bottom: 15px; opacity: 0.9; color: #fff; }
-        .tech-item span { font-weight: 700; font-size: 0.9rem; letter-spacing: 1px; color: var(--text-sub); }
 
-        /* --- PROJECT CARDS --- */
-        .project-card { 
-            padding: 45px 35px; border-radius: var(--radius); background: var(--glass); border: 1px solid var(--glass-border); 
-            text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; min-height: 320px;
-            transition: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        .sync-svg {
+            width: 22px; height: 22px;
+            fill: none; stroke: var(--accent);
+            stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .project-card:hover { border-color: #fff; transform: translateY(-10px); background: rgba(255,255,255,0.06); }
 
-        /* --- CONTACT BUTTONS --- */
-        .action-box { background: #ffffff; color: #000; padding: 80px 40px; border-radius: var(--radius); text-align: center; }
-        .btn { padding: 18px 36px; border-radius: 100px; font-weight: 800; text-decoration: none; display: inline-block; text-transform: uppercase; font-size: 0.75rem; border:none; transition: 0.3s; }
-        .btn-black { background: #000; color: #fff; }
-        .btn-black:hover { background: #333; }
-        .btn-discord { background: #5865f2; color: #fff; }
-        .btn-discord:hover { background: #4752c4; }
+        .spinning { transform: rotate(360deg); }
 
-        #popup { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); background: #000; color: #fff; padding: 15px 30px; border-radius: 100px; font-weight: 800; z-index: 2000; transition: 0.5s; }
-        #popup.show { bottom: 40px; }
-        .fade-in { opacity: 0; transform: translateY(30px); transition: 1s cubic-bezier(0.16, 1, 0.3, 1); }
-        .fade-in.visible { opacity: 1; transform: translateY(0); }
-        footer { padding: 80px 0; text-align: center; color: var(--text-sub); font-size: 0.65rem; letter-spacing: 6px; text-transform: uppercase; }
+        .update-time { 
+            font-size: 11px; color: var(--secondary-text); 
+            text-transform: uppercase; font-family: sans-serif;
+            letter-spacing: 0.5px;
+            line-height: 32px; 
+        }
+
+        .mode-toggle { cursor: pointer; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; }
+        .icon-svg { width: 22px; height: 22px; stroke: var(--text); fill: none; stroke-width: 2; }
+
+        .display-area { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 180px; }
+        .input-wrapper { display: flex; align-items: center; justify-content: space-between; height: 70px; }
+        
+        #val-in { font-size: 52px; font-weight: 300; color: var(--text); border: none; background: transparent; outline: none; width: 75%; }
+        .result-amt { font-size: 60px; font-weight: 200; color: var(--accent); width: 75%; overflow: hidden; }
+        .code-tag { font-family: sans-serif; font-weight: 700; color: var(--secondary-text); font-size: 18px; }
+        .rate-ref { border-top: 1px solid var(--key-bg); padding-top: 8px; font-size: 15px; color: var(--secondary-text); margin-bottom: 15px; }
+
+        .selector-box { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; position: relative; height: 64px; }
+        .pick-btn { flex: 1; background: var(--key-bg); height: 100%; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+        .pick-label { font-size: 10px; color: var(--secondary-text); text-transform: uppercase; font-family: sans-serif; }
+        
+        .swap-circle { 
+            width: 44px; height: 44px; background: var(--accent); border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; z-index: 5; 
+            position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); 
+            color: white; border: 4px solid var(--bg); cursor: pointer;
+            transition: transform 0.4s ease;
+        }
+        .swap-circle.rotate { transform: translate(-50%, -50%) rotate(180deg); }
+
+        .keypad-grid { 
+            display: grid; 
+            grid-template-columns: 2.8fr 1.2fr; 
+            gap: 12px; 
+            height: 360px; 
+        }
+        .numeric-zone { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .action-zone { display: flex; flex-direction: column; gap: 12px; }
+        
+        .key { 
+            background: var(--key-bg); border-radius: 100px; display: flex; 
+            justify-content: center; align-items: center; font-size: 30px; 
+            cursor: pointer; user-select: none;
+            font-family: "Times New Roman" !important; 
+        }
+        .numeric-zone .key { aspect-ratio: 1/1; }
+        .action-zone .key { flex: 1; border-radius: 100px; width: 100%; }
+
+        .key:active { background: var(--key-active); transform: scale(0.95); transition: 0.1s; }
+        .pill-ac { background: var(--accent); color: white; font-weight: 700; font-size: 24px; }
+        .pill-del { color: var(--accent); font-size: 30px; }
+
+        #picker-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); z-index: 1000; display: none; flex-direction: column; padding: 20px; padding-top: env(safe-area-inset-top); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-family: sans-serif; }
+        .search-in { background: var(--key-bg); border: none; padding: 18px; border-radius: 20px; color: var(--text); width: 100%; margin-bottom: 15px; font-size: 18px; outline: none; font-family: sans-serif; }
+        .country-list { flex: 1; overflow-y: scroll; }
+        .country-item { padding: 20px; border-bottom: 1px solid var(--key-bg); display: flex; justify-content: space-between; align-items: center; font-family: sans-serif; }
     </style>
 </head>
 <body>
 
-    <div id="cursor-dot"></div>
-    <div id="cursor-ring"></div>
-    <canvas id="bg-canvas"></canvas>
-    <div id="popup">SIGNAL COPIED</div>
+<div id="picker-modal">
+    <div class="modal-header">
+        <h2>Select Currency</h2>
+        <span onclick="closePicker()" style="font-size: 45px; cursor: pointer;">×</span>
+    </div>
+    <input type="text" id="search-box" class="search-in" placeholder="Search country..." oninput="filterCountries(this.value)">
+    <div class="country-list" id="country-list"></div>
+</div>
 
-    <nav>
-        <div class="nav-container">
-            <div style="font-family:'Space Grotesk'; font-weight:900;">EARENDEL LAB</div>
-            <div style="display:flex; gap:20px;">
-                <a href="#home" class="nav-item">Home</a>
-                <a href="#about" class="nav-item">Scope</a>
-                <a href="#work" class="nav-item">Lab</a>
-                <a href="#starshot" class="nav-item">Vision</a>
-                <a href="#contact" class="nav-item">Contact</a>
+<div class="app-container">
+    <div class="top-nav">
+        <div class="sync-container" onclick="fetchRates()">
+            <div class="sync-btn-wrapper">
+                <svg class="sync-svg" id="sync-icon" viewBox="0 0 24 24">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
             </div>
+            <div class="update-time" id="last-update">SYNCING...</div>
         </div>
-    </nav>
+        <div class="mode-toggle" id="mode-icon" onclick="toggleTheme()"></div>
+    </div>
 
-    <main>
-        <section id="home">
-            <div class="container">
-                <div class="fade-in" style="font-size: clamp(1.5rem, 5vw, 2.5rem); font-weight: 700; margin-bottom: 10px;">
-                    <span style="font-family:'Space Grotesk'; color:#fff;">Hey, I am</span>
-                    <span style="font-family:'JetBrains Mono'; color:var(--terminal);" id="typewriter"></span>
-                </div>
-                <p style="font-size: 0.8rem; color: var(--accent); letter-spacing: 6px; font-weight: 700; text-transform: uppercase; margin-bottom: 15px;" class="fade-in">The cosmos exists; I wonder how.🌀</p>
-                <h1 class="fade-in">LOGIC<br>ARCHITECT</h1>
-            </div>
-        </section>
+    <div class="display-area">
+        <div class="input-wrapper">
+            <input type="text" id="val-in" value="1" readonly>
+            <div id="code-in" class="code-tag">USD</div>
+        </div>
+        <div class="rate-ref" id="rate-line">1 USD = ---</div>
+        
+        <div class="input-wrapper">
+            <div class="result-amt" id="val-out">0.00</div>
+            <div id="code-out" class="code-tag">SAR</div>
+        </div>
+    </div>
 
-        <section id="about">
-            <div class="container fade-in">
-                <div class="glass-card">
-                    <h2>CORE SCOPE</h2>
-                    <div class="grid">
-                        <div class="tab-item">
-                            <h4>App Testing</h4>
-                            <p>Identifying critical logic vulnerabilities and edge-case failures before production. Ensuring bulletproof application stability.</p>
-                        </div>
-                        <div class="tab-item">
-                            <h4>Documentation</h4>
-                            <p>Refining READMEs into high-conversion, professional technical resources that showcase project quality.</p>
-                        </div>
-                        <div class="tab-item">
-                            <h4>Logic Audit</h4>
-                            <p>Systematic review of UX interaction patterns and backend behavioral consistency to eliminate system errors.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+    <div class="selector-box">
+        <div class="pick-btn" onclick="openPicker('from')">
+            <span class="pick-label">From</span>
+            <span id="from-btn-text">USD</span>
+        </div>
+        <div class="swap-circle" id="swap-btn" onclick="swap()">⇅</div>
+        <div class="pick-btn" onclick="openPicker('to')">
+            <span class="pick-label">To</span>
+            <span id="to-btn-text">SAR</span>
+        </div>
+    </div>
 
-        <section id="stack">
-            <div class="container fade-in">
-                <h2 style="font-size: 2rem; margin-bottom: 20px;">LAB STACK</h2>
-                <div class="tech-grid">
-                    <div class="tech-item"><i class="devicon-java-plain"></i><span>Java</span></div>
-                    <div class="tech-item"><i class="devicon-androidstudio-plain"></i><span>Android</span></div>
-                    <div class="tech-item"><i class="devicon-git-plain"></i><span>Git</span></div>
-                    <div class="tech-item"><i class="devicon-vscode-plain"></i><span>VS Code</span></div>
-                    <div class="tech-item"><i class="devicon-html5-plain"></i><span>HTML5</span></div>
-                </div>
-            </div>
-        </section>
+    <div class="keypad-grid">
+        <div class="numeric-zone">
+            <div class="key" onclick="num('7')">7</div><div class="key" onclick="num('8')">8</div><div class="key" onclick="num('9')">9</div>
+            <div class="key" onclick="num('4')">4</div><div class="key" onclick="num('5')">5</div><div class="key" onclick="num('6')">6</div>
+            <div class="key" onclick="num('1')">1</div><div class="key" onclick="num('2')">2</div><div class="key" onclick="num('3')">3</div>
+            <div class="key" onclick="num('0')">0</div><div class="key" onclick="num('00')">00</div><div class="key" onclick="num('.')">.</div>
+        </div>
+        <div class="action-zone">
+            <div class="key pill-ac" onclick="num('AC')">AC</div>
+            <div class="key pill-del" onclick="num('DEL')">⌫</div>
+        </div>
+    </div>
+</div>
 
-        <section id="work">
-            <div class="container">
-                <h2 class="fade-in">LAB OUTPUT</h2>
-                <div class="grid">
-                    <a href="https://github.com/Earendel-lab/Currency" target="_blank" class="project-card fade-in reactive">
-                        <div><h3>Currency</h3><p style="color:var(--text-sub); margin-top:10px;">Minimalist Nothing-OS aesthetic converter.</p></div>
-                        <div style="color:var(--accent); font-weight:800; font-size:0.7rem; margin-top:20px;">VISIT LAB →</div>
-                    </a>
-                    <a href="https://github.com/Earendel-lab/Lumina" target="_blank" class="project-card fade-in reactive">
-                        <div><h3>Lumina</h3><p style="color:var(--text-sub); margin-top:10px;">Modern Android brightness utility.</p></div>
-                        <div style="color:var(--accent); font-weight:800; font-size:0.7rem; margin-top:20px;">VISIT LAB →</div>
-                    </a>
-                    <a href="https://github.com/Earendel-lab/Flow" target="_blank" class="project-card fade-in reactive">
-                        <div><h3>Flow</h3><p style="color:var(--text-sub); margin-top:10px;">Countdown timer for deep work flow.</p></div>
-                        <div style="color:var(--accent); font-weight:800; font-size:0.7rem; margin-top:20px;">VISIT LAB →</div>
-                    </a>
-                </div>
-            </div>
-        </section>
+<script>
+    let usdRates = JSON.parse(localStorage.getItem('fx-usd-rates')) || {};
+    let currencyList = JSON.parse(localStorage.getItem('fx-list')) || {};
+    let fromCode = localStorage.getItem('fx-from') || 'usd';
+    let toCode = localStorage.getItem('fx-to') || 'sar';
+    let activeTarget = 'from';
+    
+    const inputEl = document.getElementById('val-in');
+    const outputEl = document.getElementById('val-out');
 
-        <section id="starshot">
-            <div class="container" style="text-align: center;">
-                <h2 class="fade-in">PROJECT STARSHOT</h2>
-                <p class="fade-in" style="font-size: 1.4rem; color: var(--text-sub); max-width: 900px; margin: 0 auto; line-height: 1.8;">
-                    I dream of seeing the success of <b>Project Starshot</b>.
-                    <br><br>
-                    I look forward to seeing the <b>data and images</b> it sends back as I explore the <b>Cosmos</b> through code.
-                </p>
-            </div>
-        </section>
+    const sunIcon = `<svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+    const moonIcon = `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
 
-        <section id="contact">
-            <div class="container">
-                <div class="action-box fade-in">
-                    <h2 style="background: linear-gradient(135deg, #000 0%, #444 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">INITIATE AUDIT</h2>
-                    <div style="display:flex; gap:15px; justify-content:center; margin-top:30px; flex-wrap: wrap;">
-                        <button class="btn btn-black reactive" onclick="copyMail()">Copy Email</button>
-                        <a href="https://github.com/Earendel-lab" target="_blank" class="btn btn-black reactive">GitHub</a>
-                        <a href="https://discord.com/users/dj044680" target="_blank" class="btn btn-discord reactive">Discord</a>
-                    </div>
-                </div>
-                <footer>© 2026 EARENDEL LAB</footer>
-            </div>
-        </section>
-    </main>
+    function updateThemeIcon() {
+        const isLight = document.body.classList.contains('light-mode');
+        document.getElementById('mode-icon').innerHTML = isLight ? moonIcon : sunIcon;
+    }
 
-    <script>
-        /* --- STICKY LERP CURSOR --- */
-        const dot = document.getElementById('cursor-dot');
-        const ring = document.getElementById('cursor-ring');
-        let mX = 0, mY = 0, cX = 0, cY = 0;
+    function adjustFontSize() {
+        const length = inputEl.value.length;
+        inputEl.style.fontSize = length > 12 ? '28px' : length > 8 ? '38px' : '52px';
+        const outLength = outputEl.innerText.length;
+        outputEl.style.fontSize = outLength > 12 ? '32px' : outLength > 8 ? '45px' : '60px';
+    }
 
-        window.addEventListener('mousemove', e => { mX = e.clientX; mY = e.clientY; });
+    async function init() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') document.body.classList.add('light-mode');
+        updateThemeIcon();
+        
+        try {
+            const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.json');
+            currencyList = await res.json();
+            localStorage.setItem('fx-list', JSON.stringify(currencyList));
+        } catch(e) {}
+        
+        fetchRates();
+    }
 
-        function lerp() {
-            cX += (mX - cX) * 0.22; cY += (mY - cY) * 0.22;
-            dot.style.transform = `translate(${cX - 3}px, ${cY - 3}px)`;
-            ring.style.transform = `translate(${cX - 17}px, ${cY - 17}px)`;
-            requestAnimationFrame(lerp);
+    async function fetchRates() {
+        const icon = document.getElementById('sync-icon');
+        icon.classList.add('spinning');
+        document.getElementById('last-update').innerText = "SYNCING...";
+
+        try {
+            // Fetch USD rates (bridging currency for ALL countries)
+            const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json`);
+            const data = await res.json();
+            usdRates = data.usd;
+            localStorage.setItem('fx-usd-rates', JSON.stringify(usdRates));
+            localStorage.setItem('fx-last-sync-time', new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+        } catch (e) {}
+        
+        const lastSync = localStorage.getItem('fx-last-sync-time');
+        document.getElementById('last-update').innerText = lastSync || "---";
+        convert();
+        setTimeout(() => icon.classList.remove('spinning'), 800);
+    }
+
+    function num(k) {
+        let val = inputEl.value;
+        if (k === 'AC') inputEl.value = "0";
+        else if (k === 'DEL') inputEl.value = val.length > 1 ? val.slice(0, -1) : "0";
+        else {
+            if (val === "0" && k !== '.') inputEl.value = k;
+            else if (val.length < 15) inputEl.value += k;
         }
-        lerp();
+        convert();
+    }
 
-        document.querySelectorAll('.reactive, .nav-item').forEach(el => {
-            el.addEventListener('mouseenter', () => {
-                dot.style.opacity = '0';
-                ring.style.width = '60px'; ring.style.height = '60px';
-                ring.style.margin = '-13px 0 0 -13px';
-                ring.style.borderColor = '#07C12F'; ring.style.background = 'rgba(7, 193, 47, 0.15)';
-            });
-            el.addEventListener('mouseleave', () => {
-                dot.style.opacity = '1';
-                ring.style.width = '34px'; ring.style.height = '34px';
-                ring.style.margin = '0';
-                ring.style.borderColor = 'rgba(255,255,255,0.4)'; ring.style.background = 'transparent';
-            });
+    function convert() {
+        document.getElementById('from-btn-text').innerText = fromCode.toUpperCase();
+        document.getElementById('to-btn-text').innerText = toCode.toUpperCase();
+        document.getElementById('code-in').innerText = fromCode.toUpperCase();
+        document.getElementById('code-out').innerText = toCode.toUpperCase();
+        
+        // Logical Cross-rate calculation using USD base
+        // Formula: (Target Rate / Source Rate)
+        const rateFrom = fromCode === 'usd' ? 1 : usdRates[fromCode];
+        const rateTo = toCode === 'usd' ? 1 : usdRates[toCode];
+
+        if(rateFrom && rateTo) {
+            const finalRate = rateTo / rateFrom;
+            document.getElementById('rate-line').innerText = `1 ${fromCode.toUpperCase()} = ${finalRate.toFixed(4)} ${toCode.toUpperCase()}`;
+            outputEl.innerText = (parseFloat(inputEl.value) * finalRate).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        adjustFontSize();
+    }
+
+    function openPicker(target) {
+        activeTarget = target;
+        document.getElementById('picker-modal').style.display = 'flex';
+        filterCountries('');
+    }
+
+    function closePicker() { document.getElementById('picker-modal').style.display = 'none'; }
+
+    function selectCurrency(code) {
+        if(activeTarget === 'from') { fromCode = code; localStorage.setItem('fx-from', code); }
+        else { toCode = code; localStorage.setItem('fx-to', code); }
+        closePicker(); convert();
+    }
+
+    function filterCountries(query) {
+        const container = document.getElementById('country-list');
+        container.innerHTML = '';
+        const q = query.toLowerCase();
+        Object.keys(currencyList).sort().forEach(code => {
+            if (code.includes(q) || currencyList[code].toLowerCase().includes(q)) {
+                const div = document.createElement('div');
+                div.className = 'country-item';
+                div.innerHTML = `<div><div style="font-weight:600;">${currencyList[code]}</div><div style="font-size:12px;color:var(--secondary-text);">${code.toUpperCase()}</div></div><span style="color:var(--accent); font-weight:800;">→</span>`;
+                div.onclick = () => selectCurrency(code);
+                container.appendChild(div);
+            }
         });
+    }
 
-        /* --- TYPING --- */
-        const words = ["DJ", "Earendel"];
-        const el = document.getElementById('typewriter');
-        let wIdx = 0, cIdx = 0, isDel = false;
-        function type() {
-            const cur = words[wIdx];
-            el.textContent = isDel ? cur.substring(0, cIdx - 1) : cur.substring(0, cIdx + 1);
-            cIdx = isDel ? cIdx - 1 : cIdx + 1;
-            let s = isDel ? 80 : 150;
-            if (!isDel && cIdx === cur.length) { s = 2000; isDel = true; }
-            else if (isDel && cIdx === 0) { isDel = false; wIdx = (wIdx + 1) % words.length; s = 500; }
-            setTimeout(type, s);
-        }
-        type();
+    function swap() { 
+        const btn = document.getElementById('swap-btn');
+        btn.classList.add('rotate');
+        setTimeout(() => btn.classList.remove('rotate'), 400);
+        [fromCode, toCode] = [toCode, fromCode]; 
+        localStorage.setItem('fx-from', fromCode);
+        localStorage.setItem('fx-to', toCode);
+        convert(); 
+    }
 
-        /* --- THREE.JS BACKGROUND --- */
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 1, 1000);
-        camera.position.z = 100;
-        const renderer = new THREE.WebGLRenderer({ canvas: document.querySelector('#bg-canvas'), antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
+    function toggleTheme() {
+        document.body.classList.toggle('light-mode');
+        localStorage.setItem('theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+        updateThemeIcon();
+    }
 
-        const blobs = [];
-        const fluidGroup = new THREE.Group();
-        const colors = [0x0f172a, 0x1e1b4b, 0x020617, 0x1e3a8a];
-        for(let i=0; i<6; i++) {
-            const mesh = new THREE.Mesh(new THREE.CircleGeometry(15, 64), new THREE.MeshBasicMaterial({ color: colors[i%4], transparent: true, opacity: 0.28 }));
-            mesh.position.set((Math.random()-0.5)*150, (Math.random()-0.5)*150, -20);
-            const s = 4 + Math.random()*6; mesh.scale.set(s,s,1);
-            blobs.push({ mesh, phase: Math.random()*Math.PI*2 });
-            fluidGroup.add(mesh);
-        }
-        scene.add(fluidGroup);
-
-        const starCount = 600;
-        const starGeo = new THREE.BufferGeometry();
-        const starPos = new Float32Array(starCount * 3);
-        for(let i=0; i<starCount; i++) { starPos[i*3]=(Math.random()-0.5)*1500; starPos[i*3+1]=(Math.random()-0.5)*1500; starPos[i*3+2]=Math.random()*1000; }
-        starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-        const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.9, transparent: true, opacity: 0.7 }));
-        scene.add(starField);
-
-        let speedMult = 0.4;
-        const visionObs = new IntersectionObserver((entries) => { speedMult = entries[0].isIntersecting ? 25 : 0.4; }, { threshold: 0.1 });
-        visionObs.observe(document.getElementById('starshot'));
-
-        function animate() {
-            requestAnimationFrame(animate);
-            blobs.forEach(b => { b.phase += 0.004; b.mesh.position.y += Math.sin(b.phase)*0.15; b.mesh.position.x += Math.cos(b.phase)*0.08; });
-            const pos = starGeo.attributes.position.array;
-            for(let i=0; i<starCount; i++) { pos[i*3+2]+=speedMult; if(pos[i*3+2]>1000) pos[i*3+2]=0; }
-            starGeo.attributes.position.needsUpdate = true;
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        function copyMail() { navigator.clipboard.writeText('zwebuse@gmail.com'); const p = document.getElementById('popup'); p.classList.add('show'); setTimeout(()=>p.classList.remove('show'), 2000); }
-        const reveal = new IntersectionObserver((entries) => { entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); }); }, { threshold: 0.1 });
-        document.querySelectorAll('.fade-in').forEach(el => reveal.observe(el));
-        window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
-    </script>
+    init();
+</script>
 </body>
 </html>
