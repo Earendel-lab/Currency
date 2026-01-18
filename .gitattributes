@@ -1,0 +1,15 @@
+
+index.html linguist-language=Java
+index.html linguist-language=Python
+index.html linguist-language=C++
+
+
+lab/* linguist-detectable=true
+
+lab/*.java linguist-language=Java
+lab/*.py linguist-language=Python
+lab/*.cpp linguist-language=C++
+lab/*.rs linguist-language=Rust
+lab/*.kt linguist-language=Kotlin
+lab/*.sh linguist-language=Shell
+lab/*.go linguist-language=Go
