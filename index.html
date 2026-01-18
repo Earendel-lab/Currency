@@ -97,7 +97,6 @@
         .numeric-zone { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
         .action-zone { display: flex; flex-direction: column; gap: 12px; }
         
-        /* FIX: Smoother button press */
         .key { 
             background: var(--key-bg); border-radius: 100px; display: flex; justify-content: center; 
             align-items: center; font-size: 30px; cursor: pointer; user-select: none;
@@ -199,6 +198,22 @@
 
     const indFmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 8 });
 
+    // Expert Addition: Haptic Feedback for Touch Devices
+    function haptic() {
+        if (window.navigator && window.navigator.vibrate) {
+            window.navigator.vibrate(10);
+        }
+    }
+
+    // Expert Addition: Physical Keyboard Support
+    window.addEventListener('keydown', (e) => {
+        if (document.getElementById('picker-modal').style.display === 'flex') return;
+        if (e.key >= '0' && e.key <= '9') num(e.key);
+        if (e.key === '.') num('.');
+        if (e.key === 'Backspace') num('DEL');
+        if (e.key === 'Escape') num('AC');
+    });
+
     function formatIndian(valStr) {
         if (!valStr || valStr === "0") return "0";
         if (valStr.endsWith('.')) {
@@ -232,11 +247,14 @@
             });
             countryList = filtered;
             localStorage.setItem('fx-list', JSON.stringify(countryList));
-        } catch(e) {}
+        } catch(e) {
+            console.log("Offline or API Error");
+        }
         fetchRates();
     }
 
     async function fetchRates() {
+        haptic();
         const icon = document.getElementById('sync-icon');
         icon.classList.add('spinning');
         try {
@@ -247,13 +265,16 @@
                 localStorage.setItem('fx-usd-rates', JSON.stringify(usdRates));
                 localStorage.setItem('fx-last-sync-time', new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
             }
-        } catch (e) {}
+        } catch (e) {
+            alert("Connection error. Using cached rates.");
+        }
         document.getElementById('last-update').innerText = localStorage.getItem('fx-last-sync-time') || "OFFLINE";
         convert();
         setTimeout(() => icon.classList.remove('spinning'), 800);
     }
 
     function num(k) {
+        haptic();
         if (k === 'AC') rawInput = "0";
         else if (k === 'DEL') rawInput = rawInput.length > 1 ? rawInput.slice(0, -1) : "0";
         else {
@@ -285,7 +306,6 @@
         const formattedOut = isNaN(resVal) ? "0.00" : new Intl.NumberFormat('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(resVal);
         outputEl.innerText = formattedOut;
         
-        // FIX: Shrinking logic for BOTH input and output
         const inLen = inputEl.value.length;
         inputEl.style.fontSize = inLen > 12 ? '28px' : inLen > 9 ? '38px' : '52px';
 
@@ -293,10 +313,11 @@
         outputEl.style.fontSize = outLen > 12 ? '32px' : outLen > 9 ? '42px' : '60px';
     }
 
-    function openPicker(t) { activeTarget = t; document.getElementById('picker-modal').style.display = 'flex'; filterCountries(''); }
-    function closePicker() { document.getElementById('picker-modal').style.display = 'none'; }
+    function openPicker(t) { haptic(); activeTarget = t; document.getElementById('picker-modal').style.display = 'flex'; filterCountries(''); }
+    function closePicker() { haptic(); document.getElementById('picker-modal').style.display = 'none'; }
 
     function toggleFav(e, code) {
+        haptic();
         e.stopPropagation();
         favorites = favorites.includes(code) ? favorites.filter(f => f !== code) : [...favorites, code];
         localStorage.setItem('fx-favs', JSON.stringify(favorites));
@@ -327,6 +348,7 @@
     }
 
     function swap() {
+        haptic();
         const btn = document.getElementById('swap-btn');
         btn.classList.add('rotate'); setTimeout(() => btn.classList.remove('rotate'), 400);
         [fromCode, toCode] = [toCode, fromCode];
@@ -335,6 +357,7 @@
     }
 
     function toggleTheme() {
+        haptic();
         const isLight = document.body.classList.toggle('light-mode');
         localStorage.setItem('theme', isLight ? 'light' : 'dark');
         updateThemeIcon();
