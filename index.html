@@ -50,7 +50,6 @@
 
         .top-nav { display: flex; justify-content: space-between; align-items: center; height: 44px; margin-bottom: 10px; }
         .sync-container { display: flex; align-items: center; gap: 10px; height: 100%; cursor: pointer; }
-        
         .sync-btn-wrapper { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
 
         .sync-svg {
@@ -75,13 +74,14 @@
         .display-area { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 180px; }
         .input-wrapper { display: flex; align-items: center; justify-content: space-between; height: 70px; }
         
-        #val-in { font-size: 52px; font-weight: 300; color: var(--text); border: none; background: transparent; outline: none; width: 75%; text-align: left; }
-        .result-amt { font-size: 60px; font-weight: 200; color: var(--accent); width: 75%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        #val-in { font-size: 52px; font-weight: 300; color: var(--text); border: none; background: transparent; outline: none; width: 75%; text-align: left; transition: font-size 0.2s ease; }
+        .result-amt { font-size: 60px; font-weight: 200; color: var(--accent); width: 75%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; transition: font-size 0.2s ease; }
         .code-tag { font-family: sans-serif; font-weight: 700; color: var(--secondary-text); font-size: 18px; }
         .rate-ref { border-top: 1px solid var(--key-bg); padding-top: 8px; font-size: 15px; color: var(--secondary-text); margin-bottom: 15px; }
 
         .selector-box { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; position: relative; height: 64px; }
-        .pick-btn { flex: 1; background: var(--key-bg); height: 100%; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+        .pick-btn { flex: 1; background: var(--key-bg); height: 100%; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.1s; }
+        .pick-btn:active { transform: scale(0.96); }
         .pick-label { font-size: 10px; color: var(--secondary-text); text-transform: uppercase; font-family: sans-serif; }
         
         .swap-circle { 
@@ -97,7 +97,12 @@
         .numeric-zone { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
         .action-zone { display: flex; flex-direction: column; gap: 12px; }
         
-        .key { background: var(--key-bg); border-radius: 100px; display: flex; justify-content: center; align-items: center; font-size: 30px; cursor: pointer; user-select: none; }
+        /* FIX: Smoother button press */
+        .key { 
+            background: var(--key-bg); border-radius: 100px; display: flex; justify-content: center; 
+            align-items: center; font-size: 30px; cursor: pointer; user-select: none;
+            transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), background 0.1s ease;
+        }
         .numeric-zone .key { aspect-ratio: 1/1; }
         .action-zone .key { flex: 1; border-radius: 100px; width: 100%; }
 
@@ -187,30 +192,24 @@
     let favorites = JSON.parse(localStorage.getItem('fx-favs')) || [];
     let fromCode = localStorage.getItem('fx-from') || 'usd';
     let toCode = localStorage.getItem('fx-to') || 'sar';
-    let rawInput = "1"; // Internal numeric string
+    let rawInput = "1"; 
     let activeTarget = 'from';
 
     const blacklist = ['btc','eth','ltc','xrp','bch','dot','link','xlm','ada','bnb','usdt','ust','sol','matic','xag','xau','xpd','xpt','std','ves','byr','cup','zrn'];
 
-    // Indian Formatter
     const indFmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 8 });
 
     function formatIndian(valStr) {
         if (!valStr || valStr === "0") return "0";
-        
-        // Handle logic where user just typed a dot
         if (valStr.endsWith('.')) {
             const num = parseFloat(valStr.slice(0, -1));
             return indFmt.format(num) + ".";
         }
-        
-        // Handle trailing zeros after decimal for smooth typing (e.g., 10.0)
         if (valStr.includes('.')) {
             const parts = valStr.split('.');
             const head = indFmt.format(parseFloat(parts[0]));
             return head + "." + parts[1];
         }
-
         return indFmt.format(parseFloat(valStr));
     }
 
@@ -274,7 +273,6 @@
         document.getElementById('code-in').innerText = fromCode.toUpperCase();
         document.getElementById('code-out').innerText = toCode.toUpperCase();
         
-        // Input: Show commas, but NO decimal unless typed
         inputEl.value = formatIndian(rawInput);
         
         const rFrom = usdRates[fromCode] || 1;
@@ -283,12 +281,16 @@
 
         document.getElementById('rate-line').innerText = `1 ${fromCode.toUpperCase()} = ${finalRate.toFixed(4)} ${toCode.toUpperCase()}`;
         
-        // Output: Always show 2 decimal places for money, but use Indian Commas
         let resVal = parseFloat(rawInput) * finalRate;
-        outputEl.innerText = isNaN(resVal) ? "0.00" : new Intl.NumberFormat('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(resVal);
+        const formattedOut = isNaN(resVal) ? "0.00" : new Intl.NumberFormat('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(resVal);
+        outputEl.innerText = formattedOut;
         
-        const len = inputEl.value.length;
-        inputEl.style.fontSize = len > 12 ? '28px' : len > 9 ? '38px' : '52px';
+        // FIX: Shrinking logic for BOTH input and output
+        const inLen = inputEl.value.length;
+        inputEl.style.fontSize = inLen > 12 ? '28px' : inLen > 9 ? '38px' : '52px';
+
+        const outLen = formattedOut.length;
+        outputEl.style.fontSize = outLen > 12 ? '32px' : outLen > 9 ? '42px' : '60px';
     }
 
     function openPicker(t) { activeTarget = t; document.getElementById('picker-modal').style.display = 'flex'; filterCountries(''); }
