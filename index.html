@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
     <link rel="manifest" href="/Currency/manifest.json">
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Earendel-lab/Currency/main/icon.png">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/Earendel-lab/Currency/main/icon.png">
+    
     <meta name="theme-color" content="#000000">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -198,14 +201,12 @@
 
     const indFmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 8 });
 
-    // Expert Addition: Haptic Feedback for Touch Devices
     function haptic() {
         if (window.navigator && window.navigator.vibrate) {
             window.navigator.vibrate(10);
         }
     }
 
-    // Expert Addition: Physical Keyboard Support
     window.addEventListener('keydown', (e) => {
         if (document.getElementById('picker-modal').style.display === 'flex') return;
         if (e.key >= '0' && e.key <= '9') num(e.key);
@@ -251,6 +252,15 @@
             console.log("Offline or API Error");
         }
         fetchRates();
+
+        // Register Service Worker for Offline capability
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/Currency/sw.js')
+                .then(reg => console.log('Offline Ready'))
+                .catch(err => console.log('SW Registration failed', err));
+            });
+        }
     }
 
     async function fetchRates() {
@@ -266,7 +276,7 @@
                 localStorage.setItem('fx-last-sync-time', new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
             }
         } catch (e) {
-            alert("Connection error. Using cached rates.");
+            console.log("Connection error. Using cached rates.");
         }
         document.getElementById('last-update').innerText = localStorage.getItem('fx-last-sync-time') || "OFFLINE";
         convert();
