@@ -45,7 +45,7 @@
 ## 💎 **Credits**
 
 * **Developer**: Built with ❤️.
-* **Rates**: Real-time data provided by [Fawaz Ahmed's API](https://github.com/fawazahmed0/currency-api). 🌐
+* **Rates**: Real-time data provided by Exchange Rate API🌐
 
 ---
 
