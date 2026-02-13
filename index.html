@@ -83,6 +83,7 @@
             -webkit-overflow-scrolling: touch; 
             display: flex; 
             align-items: center; 
+            justify-content: flex-start;
             min-width: 0;
             scrollbar-width: none;
             -ms-overflow-style: none;
@@ -103,7 +104,7 @@
             outline: none; 
             text-align: left; 
             transition: font-size 0.2s ease;
-            width: auto;
+            width: 100%;
         }
         
         .result-amt { 
@@ -117,6 +118,8 @@
             transition: font-size 0.2s ease;
             scrollbar-width: none;
             -ms-overflow-style: none;
+            text-align: left;
+            padding-right: 0;
         }
         
         .result-amt::-webkit-scrollbar {
@@ -433,7 +436,7 @@
         
         setTimeout(() => {
             if (scrollContainer) {
-                scrollContainer.scrollLeft = scrollContainer.scrollWidth;
+                scrollContainer.scrollLeft = 0;
             }
         }, 0);
         
