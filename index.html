@@ -252,13 +252,13 @@
     document.addEventListener('touchend', (e) => {
         touchEndX = e.changedTouches[0].screenX;
         touchEndY = e.changedTouches[0].screenY;
-        handleSwipe();
+        handleSwipe(e);
     }, false);
 
-    function handleSwipe() {
+    function handleSwipe(e) {
         const pickerModal = document.getElementById('picker-modal');
-        const diffX = touchStartX - touchEndX;
-        const diffY = touchStartY - touchEndY;
+        const diffX = touchEndX - touchStartX;  // Changed: Right swipe is positive, Left is negative
+        const diffY = touchEndY - touchStartY;
         
         // Only consider horizontal swipes (ignore if more vertical movement)
         if (Math.abs(diffY) > Math.abs(diffX) * 0.5) return;
@@ -266,11 +266,13 @@
         // Swipe in picker modal - prevent back closing
         if (pickerModal.style.display === 'flex') {
             if (diffX > 50) {
-                // Swiped left - do nothing in modal
+                // Swiped right - close picker instead of closing app
+                closePicker();
+                if (e && e.preventDefault) e.preventDefault();
                 return;
             } else if (diffX < -50) {
-                // Swiped right - close picker instead of app
-                closePicker();
+                // Swiped left - do nothing in modal, prevent default back
+                if (e && e.preventDefault) e.preventDefault();
                 return;
             }
         }
@@ -278,11 +280,11 @@
         // Swipe on home screen for number manipulation
         if (pickerModal.style.display !== 'flex') {
             if (diffX > 50) {
+                // Swiped right - delete last number (DEL)
+                num('DEL');
+            } else if (diffX < -50) {
                 // Swiped left - clear all (AC)
                 num('AC');
-            } else if (diffX < -50) {
-                // Swiped right - delete last number
-                num('DEL');
             }
         }
     }
