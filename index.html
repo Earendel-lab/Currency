@@ -75,14 +75,55 @@
         .icon-svg { width: 22px; height: 22px; stroke: var(--text); fill: none; stroke-width: 2; }
 
         .display-area { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 180px; }
-        .input-wrapper { display: flex; align-items: center; justify-content: space-between; height: 70px; }
-        .input-scroll { flex: 1; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; display: flex; align-items: center; min-width: 0; }
+        .input-wrapper { display: flex; align-items: center; justify-content: space-between; height: 70px; gap: 8px; }
+        .input-scroll { 
+            flex: 1; 
+            overflow-x: auto; 
+            overflow-y: hidden; 
+            -webkit-overflow-scrolling: touch; 
+            display: flex; 
+            align-items: center; 
+            min-width: 0;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
         
-        #val-in { white-space: nowrap; min-width: fit-content; }
+        .input-scroll::-webkit-scrollbar {
+            display: none;
+        }
         
-        #val-in { font-size: 52px; font-weight: 300; color: var(--text); border: none; background: transparent; outline: none; width: 75%; text-align: left; transition: font-size 0.2s ease; }
-        .result-amt { font-size: 60px; font-weight: 200; color: var(--accent); width: 75%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; transition: font-size 0.2s ease; }
-        .code-tag { font-family: sans-serif; font-weight: 700; color: var(--secondary-text); font-size: 18px; }
+        #val-in { 
+            white-space: nowrap; 
+            min-width: fit-content;
+            font-size: 52px; 
+            font-weight: 300; 
+            color: var(--text); 
+            border: none; 
+            background: transparent; 
+            outline: none; 
+            text-align: left; 
+            transition: font-size 0.2s ease;
+            width: auto;
+        }
+        
+        .result-amt { 
+            font-size: 60px; 
+            font-weight: 200; 
+            color: var(--accent); 
+            flex: 1;
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap; 
+            transition: font-size 0.2s ease;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        
+        .result-amt::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .code-tag { font-family: sans-serif; font-weight: 700; color: var(--secondary-text); font-size: 18px; flex-shrink: 0; }
         .rate-ref { border-top: 1px solid var(--key-bg); padding-top: 8px; font-size: 15px; color: var(--secondary-text); margin-bottom: 15px; }
 
         .selector-box { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; position: relative; height: 64px; }
@@ -124,8 +165,6 @@
         .star-box { padding: 10px; }
         .star-svg { width: 24px; height: 24px; fill: none; stroke: var(--secondary-text); stroke-width: 2; transition: 0.2s; }
         .star-svg.active { fill: var(--accent); stroke: var(--accent); }
-
-
     </style>
 </head>
 <body>
@@ -225,20 +264,25 @@
         if (e.key === 'Escape') num('AC');
     });
 
-    // Handle Android back button
     document.addEventListener('backbutton', handleBackButton, false);
-    window.addEventListener('popstate', handleBackButton);
+    
+    window.history.pushState({page: 'main'}, '');
+    
+    window.addEventListener('popstate', function(e) {
+        handleBackButton(e);
+        window.history.pushState({page: 'main'}, '');
+    });
 
     function handleBackButton(e) {
         const pickerModal = document.getElementById('picker-modal');
         if (pickerModal.style.display === 'flex') {
-            // Close picker and preserve search
             closePicker();
             if (e && e.preventDefault) e.preventDefault();
+            window.history.pushState({page: 'main'}, '');
+            return false;
         }
     }
 
-    // Swipe detection for back and number manipulation
     let touchStartX = 0;
     let touchStartY = 0;
     let touchEndX = 0;
@@ -257,34 +301,16 @@
 
     function handleSwipe(e) {
         const pickerModal = document.getElementById('picker-modal');
-        const diffX = touchEndX - touchStartX;  // Changed: Right swipe is positive, Left is negative
+        const diffX = touchEndX - touchStartX;
         const diffY = touchEndY - touchStartY;
         
-        // Only consider horizontal swipes (ignore if more vertical movement)
         if (Math.abs(diffY) > Math.abs(diffX) * 0.5) return;
 
-        // Swipe in picker modal - prevent back closing
         if (pickerModal.style.display === 'flex') {
             if (diffX > 50) {
-                // Swiped right - close picker instead of closing app
                 closePicker();
                 if (e && e.preventDefault) e.preventDefault();
                 return;
-            } else if (diffX < -50) {
-                // Swiped left - do nothing in modal, prevent default back
-                if (e && e.preventDefault) e.preventDefault();
-                return;
-            }
-        }
-
-        // Swipe on home screen for number manipulation
-        if (pickerModal.style.display !== 'flex') {
-            if (diffX > 50) {
-                // Swiped right - delete last number (DEL)
-                num('DEL');
-            } else if (diffX < -50) {
-                // Swiped left - clear all (AC)
-                num('AC');
             }
         }
     }
@@ -304,14 +330,12 @@
     }
 
     function showSyncStatus(message) {
-        // Removed - no UI feedback needed
     }
 
     async function init() {
         if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
         updateThemeIcon();
         
-        // Display last known update time and rates
         const lastSync = localStorage.getItem('fx-last-sync-time');
         if (lastSync) {
             document.getElementById('last-update').innerText = lastSync;
@@ -331,10 +355,8 @@
             console.log("Offline or API Error loading country list");
         }
 
-        // Fetch fresh rates on app open
         await fetchRates();
 
-        // Register Service Worker for Offline capability
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/Currency/sw.js')
@@ -345,7 +367,7 @@
     }
 
     async function fetchRates() {
-        if (isSyncing) return; // Prevent multiple simultaneous syncs
+        if (isSyncing) return;
         
         haptic();
         isSyncing = true;
@@ -357,19 +379,16 @@
             const data = await res.json();
             
             if(data.result === "success") {
-                // Update all rates
                 for(let c in data.conversion_rates) {
                     usdRates[c.toLowerCase()] = data.conversion_rates[c];
                 }
                 localStorage.setItem('fx-usd-rates', JSON.stringify(usdRates));
                 
-                // Update timestamp
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
                 localStorage.setItem('fx-last-sync-time', timeStr);
                 document.getElementById('last-update').innerText = timeStr;
                 
-                // Recalculate and display with fresh rates
                 convert();
                 showSyncStatus('Updated ✓');
             } else {
@@ -378,7 +397,6 @@
             }
         } catch (e) {
             console.log("Connection error. Using cached rates.");
-            // Still update the display with cached rates
             document.getElementById('last-update').innerText = localStorage.getItem('fx-last-sync-time') || "OFFLINE";
             convert();
             showSyncStatus('Offline');
@@ -413,21 +431,18 @@
         const formattedInput = formatIndian(rawInput);
         inputEl.value = formattedInput;
         
-        // Auto-scroll to the end on input
         setTimeout(() => {
             if (scrollContainer) {
-                scrollContainer.scrollLeft = inputEl.scrollWidth;
+                scrollContainer.scrollLeft = scrollContainer.scrollWidth;
             }
         }, 0);
         
-        // Get rates with fallback to 1 if not available
         const rFrom = usdRates[fromCode.toLowerCase()] || 1;
         const rTo = usdRates[toCode.toLowerCase()] || 1;
         const finalRate = rTo / rFrom;
 
         document.getElementById('rate-line').innerText = `1 ${fromCode.toUpperCase()} = ${finalRate.toFixed(4)} ${toCode.toUpperCase()}`;
         
-        // Parse the raw input (without commas) for calculation
         const cleanInput = rawInput.replace(/,/g, '');
         let resVal = parseFloat(cleanInput) * finalRate;
         const formattedOut = isNaN(resVal) ? "0.00" : new Intl.NumberFormat('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(resVal);
@@ -440,8 +455,20 @@
         outputEl.style.fontSize = outLen > 12 ? '32px' : outLen > 9 ? '42px' : '60px';
     }
 
-    function openPicker(t) { haptic(); activeTarget = t; document.getElementById('picker-modal').style.display = 'flex'; document.getElementById('search-box').value = ''; filterCountries(''); }
-    function closePicker() { haptic(); document.getElementById('picker-modal').style.display = 'none'; document.getElementById('search-box').value = ''; }
+    function openPicker(t) { 
+        haptic(); 
+        activeTarget = t; 
+        document.getElementById('picker-modal').style.display = 'flex'; 
+        document.getElementById('search-box').value = ''; 
+        filterCountries('');
+        window.history.pushState({page: 'picker'}, '');
+    }
+    
+    function closePicker() { 
+        haptic(); 
+        document.getElementById('picker-modal').style.display = 'none'; 
+        document.getElementById('search-box').value = ''; 
+    }
 
     function toggleFav(e, code) {
         haptic();
