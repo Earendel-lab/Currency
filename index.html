@@ -76,6 +76,7 @@
 
         .display-area { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 180px; }
         .input-wrapper { display: flex; align-items: center; justify-content: space-between; height: 70px; }
+        .input-scroll { flex: 1; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; display: flex; align-items: center; }
         
         #val-in { font-size: 52px; font-weight: 300; color: var(--text); border: none; background: transparent; outline: none; width: 75%; text-align: left; transition: font-size 0.2s ease; }
         .result-amt { font-size: 60px; font-weight: 200; color: var(--accent); width: 75%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; transition: font-size 0.2s ease; }
@@ -154,7 +155,9 @@
 
     <div class="display-area">
         <div class="input-wrapper">
-            <input type="text" id="val-in" value="1" readonly>
+            <div class="input-scroll">
+                <input type="text" id="val-in" value="1" readonly>
+            </div>
             <div id="code-in" class="code-tag">USD</div>
         </div>
         <div class="rate-ref" id="rate-line">1 USD = ---</div>
@@ -230,6 +233,55 @@
             // Close picker and preserve search
             closePicker();
             if (e && e.preventDefault) e.preventDefault();
+        }
+    }
+
+    // Swipe detection for back and number manipulation
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+
+    document.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+    }, false);
+
+    document.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].screenX;
+        touchEndY = e.changedTouches[0].screenY;
+        handleSwipe();
+    }, false);
+
+    function handleSwipe() {
+        const pickerModal = document.getElementById('picker-modal');
+        const diffX = touchStartX - touchEndX;
+        const diffY = touchStartY - touchEndY;
+        
+        // Only consider horizontal swipes (ignore if more vertical movement)
+        if (Math.abs(diffY) > Math.abs(diffX) * 0.5) return;
+
+        // Swipe in picker modal - prevent back closing
+        if (pickerModal.style.display === 'flex') {
+            if (diffX > 50) {
+                // Swiped left - do nothing in modal
+                return;
+            } else if (diffX < -50) {
+                // Swiped right - close picker instead of app
+                closePicker();
+                return;
+            }
+        }
+
+        // Swipe on home screen for number manipulation
+        if (pickerModal.style.display !== 'flex') {
+            if (diffX > 50) {
+                // Swiped left - clear all (AC)
+                num('AC');
+            } else if (diffX < -50) {
+                // Swiped right - delete last number
+                num('DEL');
+            }
         }
     }
 
