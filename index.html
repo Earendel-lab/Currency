@@ -121,6 +121,8 @@
         .star-box { padding: 10px; }
         .star-svg { width: 24px; height: 24px; fill: none; stroke: var(--secondary-text); stroke-width: 2; transition: 0.2s; }
         .star-svg.active { fill: var(--accent); stroke: var(--accent); }
+
+
     </style>
 </head>
 <body>
@@ -143,7 +145,9 @@
                     <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                 </svg>
             </div>
-            <div class="update-time" id="last-update">OFFLINE</div>
+            <div>
+                <div class="update-time" id="last-update">OFFLINE</div>
+            </div>
         </div>
         <div class="mode-toggle" id="mode-icon" onclick="toggleTheme()"></div>
     </div>
@@ -196,6 +200,7 @@
     let toCode = localStorage.getItem('fx-to') || 'sar';
     let rawInput = "1"; 
     let activeTarget = 'from';
+    let isSyncing = false;
 
     const blacklist = ['btc','eth','ltc','xrp','bch','dot','link','xlm','ada','bnb','usdt','ust','sol','matic','xag','xau','xpd','xpt','std','ves','byr','cup','zrn'];
 
@@ -215,6 +220,19 @@
         if (e.key === 'Escape') num('AC');
     });
 
+    // Handle Android back button
+    document.addEventListener('backbutton', handleBackButton, false);
+    window.addEventListener('popstate', handleBackButton);
+
+    function handleBackButton(e) {
+        const pickerModal = document.getElementById('picker-modal');
+        if (pickerModal.style.display === 'flex') {
+            // Close picker and preserve search
+            closePicker();
+            if (e && e.preventDefault) e.preventDefault();
+        }
+    }
+
     function formatIndian(valStr) {
         if (!valStr || valStr === "0") return "0";
         if (valStr.endsWith('.')) {
@@ -229,13 +247,18 @@
         return indFmt.format(parseFloat(valStr));
     }
 
+    function showSyncStatus(message) {
+        // Removed - no UI feedback needed
+    }
+
     async function init() {
         if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
         updateThemeIcon();
         
-        if (Object.keys(usdRates).length > 0) {
-            document.getElementById('last-update').innerText = localStorage.getItem('fx-last-sync-time') || "OFFLINE";
-            convert();
+        // Display last known update time and rates
+        const lastSync = localStorage.getItem('fx-last-sync-time');
+        if (lastSync) {
+            document.getElementById('last-update').innerText = lastSync;
         }
 
         try {
@@ -249,9 +272,11 @@
             countryList = filtered;
             localStorage.setItem('fx-list', JSON.stringify(countryList));
         } catch(e) {
-            console.log("Offline or API Error");
+            console.log("Offline or API Error loading country list");
         }
-        fetchRates();
+
+        // Fetch fresh rates on app open
+        await fetchRates();
 
         // Register Service Worker for Offline capability
         if ('serviceWorker' in navigator) {
@@ -264,22 +289,46 @@
     }
 
     async function fetchRates() {
+        if (isSyncing) return; // Prevent multiple simultaneous syncs
+        
         haptic();
+        isSyncing = true;
         const icon = document.getElementById('sync-icon');
         icon.classList.add('spinning');
+        
         try {
             const res = await fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/latest/USD`);
             const data = await res.json();
+            
             if(data.result === "success") {
-                for(let c in data.conversion_rates) usdRates[c.toLowerCase()] = data.conversion_rates[c];
+                // Update all rates
+                for(let c in data.conversion_rates) {
+                    usdRates[c.toLowerCase()] = data.conversion_rates[c];
+                }
                 localStorage.setItem('fx-usd-rates', JSON.stringify(usdRates));
-                localStorage.setItem('fx-last-sync-time', new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+                
+                // Update timestamp
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                localStorage.setItem('fx-last-sync-time', timeStr);
+                document.getElementById('last-update').innerText = timeStr;
+                
+                // Recalculate and display with fresh rates
+                convert();
+                showSyncStatus('Updated ✓');
+            } else {
+                showSyncStatus('Sync failed');
+                console.log("API Error:", data);
             }
         } catch (e) {
             console.log("Connection error. Using cached rates.");
+            // Still update the display with cached rates
+            document.getElementById('last-update').innerText = localStorage.getItem('fx-last-sync-time') || "OFFLINE";
+            convert();
+            showSyncStatus('Offline');
         }
-        document.getElementById('last-update').innerText = localStorage.getItem('fx-last-sync-time') || "OFFLINE";
-        convert();
+        
+        isSyncing = false;
         setTimeout(() => icon.classList.remove('spinning'), 800);
     }
 
@@ -306,8 +355,9 @@
         
         inputEl.value = formatIndian(rawInput);
         
-        const rFrom = usdRates[fromCode] || 1;
-        const rTo = usdRates[toCode] || 1;
+        // Get rates with fallback to 1 if not available
+        const rFrom = usdRates[fromCode.toLowerCase()] || 1;
+        const rTo = usdRates[toCode.toLowerCase()] || 1;
         const finalRate = rTo / rFrom;
 
         document.getElementById('rate-line').innerText = `1 ${fromCode.toUpperCase()} = ${finalRate.toFixed(4)} ${toCode.toUpperCase()}`;
@@ -323,8 +373,8 @@
         outputEl.style.fontSize = outLen > 12 ? '32px' : outLen > 9 ? '42px' : '60px';
     }
 
-    function openPicker(t) { haptic(); activeTarget = t; document.getElementById('picker-modal').style.display = 'flex'; filterCountries(''); }
-    function closePicker() { haptic(); document.getElementById('picker-modal').style.display = 'none'; }
+    function openPicker(t) { haptic(); activeTarget = t; document.getElementById('picker-modal').style.display = 'flex'; document.getElementById('search-box').value = ''; filterCountries(''); }
+    function closePicker() { haptic(); document.getElementById('picker-modal').style.display = 'none'; document.getElementById('search-box').value = ''; }
 
     function toggleFav(e, code) {
         haptic();
