@@ -76,7 +76,9 @@
 
         .display-area { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 180px; }
         .input-wrapper { display: flex; align-items: center; justify-content: space-between; height: 70px; }
-        .input-scroll { flex: 1; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; display: flex; align-items: center; }
+        .input-scroll { flex: 1; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; display: flex; align-items: center; min-width: 0; }
+        
+        #val-in { white-space: nowrap; min-width: fit-content; }
         
         #val-in { font-size: 52px; font-weight: 300; color: var(--text); border: none; background: transparent; outline: none; width: 75%; text-align: left; transition: font-size 0.2s ease; }
         .result-amt { font-size: 60px; font-weight: 200; color: var(--accent); width: 75%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; transition: font-size 0.2s ease; }
@@ -399,13 +401,22 @@
     function convert() {
         const inputEl = document.getElementById('val-in');
         const outputEl = document.getElementById('val-out');
+        const scrollContainer = document.querySelector('.input-scroll');
         
         document.getElementById('from-btn-text').innerText = fromCode.toUpperCase();
         document.getElementById('to-btn-text').innerText = toCode.toUpperCase();
         document.getElementById('code-in').innerText = fromCode.toUpperCase();
         document.getElementById('code-out').innerText = toCode.toUpperCase();
         
-        inputEl.value = formatIndian(rawInput);
+        const formattedInput = formatIndian(rawInput);
+        inputEl.value = formattedInput;
+        
+        // Auto-scroll to the end on input
+        setTimeout(() => {
+            if (scrollContainer) {
+                scrollContainer.scrollLeft = inputEl.scrollWidth;
+            }
+        }, 0);
         
         // Get rates with fallback to 1 if not available
         const rFrom = usdRates[fromCode.toLowerCase()] || 1;
@@ -414,11 +425,13 @@
 
         document.getElementById('rate-line').innerText = `1 ${fromCode.toUpperCase()} = ${finalRate.toFixed(4)} ${toCode.toUpperCase()}`;
         
-        let resVal = parseFloat(rawInput) * finalRate;
+        // Parse the raw input (without commas) for calculation
+        const cleanInput = rawInput.replace(/,/g, '');
+        let resVal = parseFloat(cleanInput) * finalRate;
         const formattedOut = isNaN(resVal) ? "0.00" : new Intl.NumberFormat('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(resVal);
         outputEl.innerText = formattedOut;
         
-        const inLen = inputEl.value.length;
+        const inLen = formattedInput.length;
         inputEl.style.fontSize = inLen > 12 ? '28px' : inLen > 9 ? '38px' : '52px';
 
         const outLen = formattedOut.length;
