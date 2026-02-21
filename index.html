@@ -238,7 +238,7 @@
 </div>
 
 <script>
-    const API_KEY = '1a9ee938a9925f4fc8d88a25a2354486'; 
+    const API_KEY = 'a9f0a6f31913cc811264df99'; 
     
     let usdRates = JSON.parse(localStorage.getItem('fx-usd-rates')) || {};
     let countryList = JSON.parse(localStorage.getItem('fx-list')) || {};
@@ -345,18 +345,18 @@
         }
 
         try {
-            const res = await fetch(`https://data.fixer.io/api/symbols?access_key=${API_KEY}`);
+            const res = await fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/codes`);
             const data = await res.json();
-            if(data.success) {
-                const filtered = {};
-                for (let code in data.symbols) {
-                    const cLower = code.toLowerCase();
-                    if (!blacklist.includes(cLower)) filtered[cLower] = data.symbols[code];
-                }
-                countryList = filtered;
-                localStorage.setItem('fx-list', JSON.stringify(countryList));
-            }
-        } catch(e) {}
+            const filtered = {};
+            data.supported_codes.forEach(c => {
+                const code = c[0].toLowerCase();
+                if (!blacklist.includes(code)) filtered[code] = c[1];
+            });
+            countryList = filtered;
+            localStorage.setItem('fx-list', JSON.stringify(countryList));
+        } catch(e) {
+            console.log("Offline or API Error loading country list");
+        }
 
         await fetchRates();
 
@@ -371,32 +371,40 @@
 
     async function fetchRates() {
         if (isSyncing) return;
+        
         haptic();
         isSyncing = true;
         const icon = document.getElementById('sync-icon');
         icon.classList.add('spinning');
+        
         try {
-            const res = await fetch(`https://data.fixer.io/api/latest?access_key=${API_KEY}`);
+            const res = await fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/latest/USD`);
             const data = await res.json();
-            if(data.success) {
-                for(let c in data.rates) {
-                    usdRates[c.toLowerCase()] = data.rates[c];
+            
+            if(data.result === "success") {
+                for(let c in data.conversion_rates) {
+                    usdRates[c.toLowerCase()] = data.conversion_rates[c];
                 }
                 localStorage.setItem('fx-usd-rates', JSON.stringify(usdRates));
+                
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
                 localStorage.setItem('fx-last-sync-time', timeStr);
                 document.getElementById('last-update').innerText = timeStr;
+                
                 convert();
                 showSyncStatus('Updated ✓');
             } else {
                 showSyncStatus('Sync failed');
+                console.log("API Error:", data);
             }
         } catch (e) {
+            console.log("Connection error. Using cached rates.");
             document.getElementById('last-update').innerText = localStorage.getItem('fx-last-sync-time') || "OFFLINE";
             convert();
             showSyncStatus('Offline');
         }
+        
         isSyncing = false;
         setTimeout(() => icon.classList.remove('spinning'), 800);
     }
@@ -417,30 +425,35 @@
         const inputEl = document.getElementById('val-in');
         const outputEl = document.getElementById('val-out');
         const scrollContainer = document.querySelector('.input-scroll');
+        
         document.getElementById('from-btn-text').innerText = fromCode.toUpperCase();
         document.getElementById('to-btn-text').innerText = toCode.toUpperCase();
         document.getElementById('code-in').innerText = fromCode.toUpperCase();
         document.getElementById('code-out').innerText = toCode.toUpperCase();
+        
         const formattedInput = formatIndian(rawInput);
         inputEl.value = formattedInput;
+        
         setTimeout(() => {
             if (scrollContainer) {
                 scrollContainer.scrollLeft = 0;
             }
         }, 0);
-        const rFrom = usdRates[fromCode.toLowerCase()];
-        const rTo = usdRates[toCode.toLowerCase()];
-        let finalRate = 0;
-        if (rFrom && rTo) {
-            finalRate = rTo / rFrom;
-        }
+        
+        const rFrom = usdRates[fromCode.toLowerCase()] || 1;
+        const rTo = usdRates[toCode.toLowerCase()] || 1;
+        const finalRate = rTo / rFrom;
+
         document.getElementById('rate-line').innerText = `1 ${fromCode.toUpperCase()} = ${finalRate.toFixed(4)} ${toCode.toUpperCase()}`;
+        
         const cleanInput = rawInput.replace(/,/g, '');
         let resVal = parseFloat(cleanInput) * finalRate;
         const formattedOut = isNaN(resVal) ? "0.00" : new Intl.NumberFormat('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(resVal);
         outputEl.innerText = formattedOut;
+        
         const inLen = formattedInput.length;
         inputEl.style.fontSize = inLen > 12 ? '28px' : inLen > 9 ? '38px' : '52px';
+
         const outLen = formattedOut.length;
         outputEl.style.fontSize = outLen > 12 ? '32px' : outLen > 9 ? '42px' : '60px';
     }
