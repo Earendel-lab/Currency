@@ -238,7 +238,8 @@
 </div>
 
 <script>
-    const API_KEY = 'a9f0a6f31913cc811264df99'; 
+    // Updated API Key applied here
+    const API_KEY = '1a9ee938a9925f4fc8d88a25a2354486'; 
     
     let usdRates = JSON.parse(localStorage.getItem('fx-usd-rates')) || {};
     let countryList = JSON.parse(localStorage.getItem('fx-list')) || {};
@@ -333,6 +334,7 @@
     }
 
     function showSyncStatus(message) {
+        // Status updates can be added here if needed
     }
 
     async function init() {
