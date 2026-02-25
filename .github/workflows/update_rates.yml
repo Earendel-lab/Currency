@@ -1,0 +1,21 @@
+name: Update Currency Rates
+on:
+  schedule:
+    - cron: '0 * * * *' # Runs every hour
+  workflow_dispatch: # Allows manual run
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Fetch Rates
+        run: |
+          curl "https://openexchangerates.org/api/latest.json?app_id=${{ secrets.API_KEY }}" -o rates.json
+      - name: Commit and Push
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add rates.json
+          git commit -m "Update rates" || exit 0
+          git push
