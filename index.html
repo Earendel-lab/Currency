@@ -89,9 +89,7 @@
             -ms-overflow-style: none;
         }
         
-        .input-scroll::-webkit-scrollbar {
-            display: none;
-        }
+        .input-scroll::-webkit-scrollbar { display: none; }
         
         #val-in { 
             white-space: nowrap; 
@@ -119,12 +117,9 @@
             scrollbar-width: none;
             -ms-overflow-style: none;
             text-align: left;
-            padding-right: 0;
         }
         
-        .result-amt::-webkit-scrollbar {
-            display: none;
-        }
+        .result-amt::-webkit-scrollbar { display: none; }
         
         .code-tag { font-family: sans-serif; font-weight: 700; color: var(--secondary-text); font-size: 18px; flex-shrink: 0; }
         .rate-ref { border-top: 1px solid var(--key-bg); padding-top: 8px; font-size: 15px; color: var(--secondary-text); margin-bottom: 15px; }
@@ -183,7 +178,7 @@
 
 <div class="app-container">
     <div class="top-nav">
-        <div class="sync-container" onclick="forceFetch()">
+        <div class="sync-container" onclick="fetchRates()">
             <div class="sync-btn-wrapper">
                 <svg class="sync-svg" id="sync-icon" viewBox="0 0 24 24">
                     <path d="M23 4v6h-6"></path>
@@ -238,8 +233,6 @@
 </div>
 
 <script>
-    const API_KEY = '0f39345cc39f4a6e8955b85b43f88ead'; 
-    
     let usdRates = JSON.parse(localStorage.getItem('fx-usd-rates')) || {};
     let countryList = JSON.parse(localStorage.getItem('fx-list')) || {};
     let favorites = JSON.parse(localStorage.getItem('fx-favs')) || [];
@@ -250,86 +243,10 @@
     let isSyncing = false;
 
     const blacklist = ['btc','eth','ltc','xrp','bch','dot','link','xlm','ada','bnb','usdt','ust','sol','matic','xag','xau','xpd','xpt','std','ves','byr','cup','zrn'];
-
     const indFmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 8 });
 
     function haptic() {
-        if (window.navigator && window.navigator.vibrate) {
-            window.navigator.vibrate(10);
-        }
-    }
-
-    window.addEventListener('keydown', (e) => {
-        if (document.getElementById('picker-modal').style.display === 'flex') return;
-        if (e.key >= '0' && e.key <= '9') num(e.key);
-        if (e.key === '.') num('.');
-        if (e.key === 'Backspace') num('DEL');
-        if (e.key === 'Escape') num('AC');
-    });
-
-    document.addEventListener('backbutton', handleBackButton, false);
-    
-    window.history.pushState({page: 'main'}, '');
-    
-    window.addEventListener('popstate', function(e) {
-        handleBackButton(e);
-        window.history.pushState({page: 'main'}, '');
-    });
-
-    function handleBackButton(e) {
-        const pickerModal = document.getElementById('picker-modal');
-        if (pickerModal.style.display === 'flex') {
-            closePicker();
-            if (e && e.preventDefault) e.preventDefault();
-            window.history.pushState({page: 'main'}, '');
-            return false;
-        }
-    }
-
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchEndX = 0;
-    let touchEndY = 0;
-
-    document.addEventListener('touchstart', (e) => {
-        touchStartX = e.changedTouches[0].screenX;
-        touchStartY = e.changedTouches[0].screenY;
-    }, false);
-
-    document.addEventListener('touchend', (e) => {
-        touchEndX = e.changedTouches[0].screenX;
-        touchEndY = e.changedTouches[0].screenY;
-        handleSwipe(e);
-    }, false);
-
-    function handleSwipe(e) {
-        const pickerModal = document.getElementById('picker-modal');
-        const diffX = touchEndX - touchStartX;
-        const diffY = touchEndY - touchStartY;
-        
-        if (Math.abs(diffY) > Math.abs(diffX) * 0.5) return;
-
-        if (pickerModal.style.display === 'flex') {
-            if (diffX > 50) {
-                closePicker();
-                if (e && e.preventDefault) e.preventDefault();
-                return;
-            }
-        }
-    }
-
-    function formatIndian(valStr) {
-        if (!valStr || valStr === "0") return "0";
-        if (valStr.endsWith('.')) {
-            const num = parseFloat(valStr.slice(0, -1));
-            return indFmt.format(num) + ".";
-        }
-        if (valStr.includes('.')) {
-            const parts = valStr.split('.');
-            const head = indFmt.format(parseFloat(parts[0]));
-            return head + "." + parts[1];
-        }
-        return indFmt.format(parseFloat(valStr));
+        if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
     }
 
     async function init() {
@@ -337,12 +254,10 @@
         updateThemeIcon();
         
         const lastSyncLabel = localStorage.getItem('fx-last-sync-label');
-        if (lastSyncLabel) {
-            document.getElementById('last-update').innerText = lastSyncLabel;
-        }
+        if (lastSyncLabel) document.getElementById('last-update').innerText = lastSyncLabel;
 
         try {
-            const res = await fetch(`https://openexchangerates.org/api/currencies.json?app_id=${API_KEY}`);
+            const res = await fetch(`https://openexchangerates.org/api/currencies.json`);
             const data = await res.json();
             const filtered = {};
             for (let code in data) {
@@ -351,47 +266,20 @@
             }
             countryList = filtered;
             localStorage.setItem('fx-list', JSON.stringify(countryList));
-        } catch(e) {
-            console.log("Offline or API Error loading country list");
-        }
+        } catch(e) { console.log("Offline or API Error"); }
 
-        await smartFetch();
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/Currency/sw.js')
-                .then(reg => console.log('Offline Ready'))
-                .catch(err => console.log('SW Registration failed', err));
-            });
-        }
-    }
-
-    async function smartFetch() {
-        const lastSync = localStorage.getItem('fx-last-sync-ms');
-        const now = Date.now();
-        const oneHour = 3600000;
-
-        if (!lastSync || (now - lastSync > oneHour)) {
-            await fetchRates();
-        } else {
-            convert();
-        }
-    }
-
-    function forceFetch() {
-        fetchRates();
+        await fetchRates();
     }
 
     async function fetchRates() {
         if (isSyncing) return;
-        
         haptic();
         isSyncing = true;
         const icon = document.getElementById('sync-icon');
         icon.classList.add('spinning');
         
         try {
-            const res = await fetch(`https://openexchangerates.org/api/latest.json?app_id=${API_KEY}`);
+            const res = await fetch('https://raw.githubusercontent.com/Earendel-lab/Currency/main/rates.json');
             const data = await res.json();
             
             if(data.rates) {
@@ -402,18 +290,14 @@
                 
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                localStorage.setItem('fx-last-sync-ms', Date.now());
                 localStorage.setItem('fx-last-sync-label', timeStr);
                 document.getElementById('last-update').innerText = timeStr;
-                
                 convert();
             }
         } catch (e) {
-            console.log("Connection error. Using cached rates.");
-            document.getElementById('last-update').innerText = localStorage.getItem('fx-last-sync-label') || "OFFLINE";
+            console.log("Using cached rates.");
             convert();
         }
-        
         isSyncing = false;
         setTimeout(() => icon.classList.remove('spinning'), 800);
     }
@@ -433,7 +317,6 @@
     function convert() {
         const inputEl = document.getElementById('val-in');
         const outputEl = document.getElementById('val-out');
-        const scrollContainer = document.querySelector('.input-scroll');
         
         document.getElementById('from-btn-text').innerText = fromCode.toUpperCase();
         document.getElementById('to-btn-text').innerText = toCode.toUpperCase();
@@ -442,12 +325,6 @@
         
         const formattedInput = formatIndian(rawInput);
         inputEl.value = formattedInput;
-        
-        setTimeout(() => {
-            if (scrollContainer) {
-                scrollContainer.scrollLeft = 0;
-            }
-        }, 0);
         
         const rFrom = usdRates[fromCode.toLowerCase()] || 1;
         const rTo = usdRates[toCode.toLowerCase()] || 1;
@@ -462,28 +339,24 @@
         
         const inLen = formattedInput.length;
         inputEl.style.fontSize = inLen > 12 ? '28px' : inLen > 9 ? '38px' : '52px';
-
         const outLen = formattedOut.length;
         outputEl.style.fontSize = outLen > 12 ? '32px' : outLen > 9 ? '42px' : '60px';
     }
 
-    function openPicker(t) { 
-        haptic(); 
-        activeTarget = t; 
-        document.getElementById('picker-modal').style.display = 'flex'; 
-        document.getElementById('search-box').value = ''; 
-        filterCountries('');
-        window.history.pushState({page: 'picker'}, '');
-    }
-    
-    function closePicker() { 
-        haptic(); 
-        document.getElementById('picker-modal').style.display = 'none'; 
-        document.getElementById('search-box').value = ''; 
+    function formatIndian(valStr) {
+        if (!valStr || valStr === "0") return "0";
+        if (valStr.endsWith('.')) return indFmt.format(parseFloat(valStr.slice(0, -1))) + ".";
+        if (valStr.includes('.')) {
+            const parts = valStr.split('.');
+            return indFmt.format(parseFloat(parts[0])) + "." + parts[1];
+        }
+        return indFmt.format(parseFloat(valStr));
     }
 
+    function openPicker(t) { haptic(); activeTarget = t; document.getElementById('picker-modal').style.display = 'flex'; filterCountries(''); }
+    function closePicker() { haptic(); document.getElementById('picker-modal').style.display = 'none'; }
+
     function toggleFav(e, code) {
-        haptic();
         e.stopPropagation();
         favorites = favorites.includes(code) ? favorites.filter(f => f !== code) : [...favorites, code];
         localStorage.setItem('fx-favs', JSON.stringify(favorites));
