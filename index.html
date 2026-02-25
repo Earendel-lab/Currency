@@ -183,7 +183,7 @@
 
 <div class="app-container">
     <div class="top-nav">
-        <div class="sync-container" onclick="fetchRates()">
+        <div class="sync-container" onclick="forceFetch()">
             <div class="sync-btn-wrapper">
                 <svg class="sync-svg" id="sync-icon" viewBox="0 0 24 24">
                     <path d="M23 4v6h-6"></path>
@@ -238,7 +238,7 @@
 </div>
 
 <script>
-    const API_KEY = 'a9f0a6f31913cc811264df99'; 
+    const API_KEY = '0f39345cc39f4a6e8955b85b43f88ead'; 
     
     let usdRates = JSON.parse(localStorage.getItem('fx-usd-rates')) || {};
     let countryList = JSON.parse(localStorage.getItem('fx-list')) || {};
@@ -332,33 +332,30 @@
         return indFmt.format(parseFloat(valStr));
     }
 
-    function showSyncStatus(message) {
-    }
-
     async function init() {
         if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
         updateThemeIcon();
         
-        const lastSync = localStorage.getItem('fx-last-sync-time');
-        if (lastSync) {
-            document.getElementById('last-update').innerText = lastSync;
+        const lastSyncLabel = localStorage.getItem('fx-last-sync-label');
+        if (lastSyncLabel) {
+            document.getElementById('last-update').innerText = lastSyncLabel;
         }
 
         try {
-            const res = await fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/codes`);
+            const res = await fetch(`https://openexchangerates.org/api/currencies.json?app_id=${API_KEY}`);
             const data = await res.json();
             const filtered = {};
-            data.supported_codes.forEach(c => {
-                const code = c[0].toLowerCase();
-                if (!blacklist.includes(code)) filtered[code] = c[1];
-            });
+            for (let code in data) {
+                const lowerCode = code.toLowerCase();
+                if (!blacklist.includes(lowerCode)) filtered[lowerCode] = data[code];
+            }
             countryList = filtered;
             localStorage.setItem('fx-list', JSON.stringify(countryList));
         } catch(e) {
             console.log("Offline or API Error loading country list");
         }
 
-        await fetchRates();
+        await smartFetch();
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -367,6 +364,22 @@
                 .catch(err => console.log('SW Registration failed', err));
             });
         }
+    }
+
+    async function smartFetch() {
+        const lastSync = localStorage.getItem('fx-last-sync-ms');
+        const now = Date.now();
+        const oneHour = 3600000;
+
+        if (!lastSync || (now - lastSync > oneHour)) {
+            await fetchRates();
+        } else {
+            convert();
+        }
+    }
+
+    function forceFetch() {
+        fetchRates();
     }
 
     async function fetchRates() {
@@ -378,31 +391,27 @@
         icon.classList.add('spinning');
         
         try {
-            const res = await fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/latest/USD`);
+            const res = await fetch(`https://openexchangerates.org/api/latest.json?app_id=${API_KEY}`);
             const data = await res.json();
             
-            if(data.result === "success") {
-                for(let c in data.conversion_rates) {
-                    usdRates[c.toLowerCase()] = data.conversion_rates[c];
+            if(data.rates) {
+                for(let c in data.rates) {
+                    usdRates[c.toLowerCase()] = data.rates[c];
                 }
                 localStorage.setItem('fx-usd-rates', JSON.stringify(usdRates));
                 
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                localStorage.setItem('fx-last-sync-time', timeStr);
+                localStorage.setItem('fx-last-sync-ms', Date.now());
+                localStorage.setItem('fx-last-sync-label', timeStr);
                 document.getElementById('last-update').innerText = timeStr;
                 
                 convert();
-                showSyncStatus('Updated ✓');
-            } else {
-                showSyncStatus('Sync failed');
-                console.log("API Error:", data);
             }
         } catch (e) {
             console.log("Connection error. Using cached rates.");
-            document.getElementById('last-update').innerText = localStorage.getItem('fx-last-sync-time') || "OFFLINE";
+            document.getElementById('last-update').innerText = localStorage.getItem('fx-last-sync-label') || "OFFLINE";
             convert();
-            showSyncStatus('Offline');
         }
         
         isSyncing = false;
