@@ -4,19 +4,19 @@
 
 ---
 
-## 🌟 **Key Features**
+##  **Key Features**
 
 * **Locked UI**: Layout elements are **fixed** to prevent shrinking during large calculations. 
 * **Custom Keypad**: Built-in **numeric keypad** designed for one-handed mobile use. 
 * **Smart Memory**: Automatically remembers your **last used currencies** and **selected theme**. 
-* **Searchable Picker**: Quickly filter through **hundreds of global currencies**. 🔍
+* **Searchable Picker**: Quickly filter through **hundreds of global currencies**. 
 * **Quick Swap**: One-tap **currency reversal** (⇅) with smooth **rotation animations**. 
 * **Visual Icons**: Professional **SVG icons** used throughout for a sharp, clean look. 
 * **Dual Themes**: Instant toggle between **Dark Mode** and **Light Mode**. 
 <img width="987" height="1029" alt="Screenshot_20260108-111607 (1) (1) (1)" src="https://github.com/user-attachments/assets/9973e5c5-546d-4e0d-9287-d91d867c0bdc" />
 ---
 
-## 🆕 **Changelog**
+##  **Changelog**
 
 * **Typography**: Integrated a refined **Serif font** for a premium, structured feel. 
 * **Button Design**: Updated all buttons with a **rounded aesthetic**. 
@@ -31,21 +31,21 @@
 ## 🛠️ **Technical Specs**
 
 * **Language**: Pure **HTML5**, CSS3, and Vanilla JavaScript. 
-* **API**: Powered by **Fawaz Ahmed's Currency API**. 🌐
+* **API**: Powered by **Openexchangerates api**. 🌐
 * **Responsiveness**: Optimized for notches and home bars using **Safe Area Insets**. 
 
 ---
 
-## 🎨 **About the Project**
+##  **About the Project**
 
 **Currency** focuses on **structural minimalism**. By stripping away complex menus, it provides a fast, "conversion-first" experience. The design uses **Nothing style** and a clean **monochrome** layout to stay out of your way.
 
 ---
 
-## 💎 **Credits**
+##  **Credits**
 
 * **Developer**: Built with ❤️.
-* **Rates**: Real-time data provided by Exchange Rate API🌐
+* **Rates**: Real-time data provided by Openexchangerates API
 
 ---
 
