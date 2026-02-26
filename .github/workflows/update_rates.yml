@@ -14,12 +14,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: Fetch Rates
         run: |
-          curl "https://openexchangerates.org/api/latest.json?app_id=${{ secrets.API_KEY }}" -o rates.json
+          TEMP="rates.tmp.json"
+          curl -s "https://openexchangerates.org/api/latest.json?app_id=${{ secrets.API_KEY }}" -o "$TEMP"
+          if [ -f rates.json ] && cmp -s "$TEMP" rates.json; then exit 0; fi
+          mv "$TEMP" rates.json
       - name: Commit and Push
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add rates.json
-          git commit -m "Update rates" || exit 0
-          git pull --rebase
+          git diff --cached --quiet || git commit -m "Update rates"
+          git pull --rebase --autostash
           git push
