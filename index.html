@@ -103,10 +103,9 @@
             text-align: left; 
             transition: font-size 0.2s ease, opacity 0.3s ease-in-out;
             width: 100%;
-            opacity: 1;
         }
 
-        #val-in.is-placeholder { opacity: 0.35; }
+        .is-placeholder { opacity: 0.35 !important; }
         
         .result-amt { 
             font-size: 60px; 
@@ -273,10 +272,6 @@
         } catch(e) { console.log("Offline or API Error"); }
 
         await fetchRates();
-        
-        if (isInitialState) {
-            document.getElementById('val-in').classList.add('is-placeholder');
-        }
     }
 
     async function fetchRates() {
@@ -331,7 +326,13 @@
                     isInitialState = false;
                     inputEl.classList.remove('is-placeholder');
                 } else if (k === '00' || k === '0') {
-                    rawInput = "0";
+                    if(rawInput === "0") {
+                         rawInput = "0";
+                    } else {
+                        rawInput = k;
+                        isInitialState = false;
+                        inputEl.classList.remove('is-placeholder');
+                    }
                 } else {
                     rawInput = k;
                     isInitialState = false;
@@ -389,22 +390,20 @@
         activeTarget = t; 
         document.getElementById('picker-modal').style.display = 'flex'; 
         filterCountries(''); 
-        window.history.pushState({ modalOpen: true }, '');
+        window.history.pushState({ modalOpen: true }, ""); 
     }
 
-    function closePicker(fromPopState = false) { 
+    function closePicker() { 
         haptic(); 
         document.getElementById('picker-modal').style.display = 'none'; 
-        if (!fromPopState && window.history.state && window.history.state.modalOpen) {
+        if (window.history.state && window.history.state.modalOpen) {
             window.history.back();
         }
     }
 
-    window.onpopstate = function(event) {
-        if (document.getElementById('picker-modal').style.display === 'flex') {
-            closePicker(true);
-        }
-    };
+    window.addEventListener('popstate', (e) => {
+        document.getElementById('picker-modal').style.display = 'none';
+    });
 
     function toggleFav(e, code) {
         e.stopPropagation();
