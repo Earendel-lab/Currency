@@ -254,14 +254,9 @@ async function init() {
     if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
     updateThemeIcon();
 
-    // The APK Double Anchor
-    window.history.pushState({page: 1}, "");
-    window.addEventListener('popstate', function(event) {
-        const modal = document.getElementById('picker-modal');
-        if (modal.style.display === 'flex') {
-            modal.style.display = 'none';
-            // Re-push so the back button is "armed" again
-            window.history.pushState({page: 1}, "");
+    window.addEventListener('hashchange', function() {
+        if (!window.location.hash.includes('modal')) {
+            document.getElementById('picker-modal').style.display = 'none';
         }
     });
 
@@ -361,11 +356,16 @@ function openPicker(t) {
     activeTarget = t; 
     document.getElementById('picker-modal').style.display = 'flex'; 
     filterCountries(''); 
+    window.location.hash = "modal"; 
 }
 
 function closePicker() { 
     haptic(); 
-    document.getElementById('picker-modal').style.display = 'none'; 
+    if (window.location.hash === "#modal") {
+        window.history.back();
+    } else {
+        document.getElementById('picker-modal').style.display = 'none';
+    }
 }
 
 function toggleFav(e, code) {
