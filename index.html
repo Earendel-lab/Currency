@@ -235,8 +235,6 @@
 </div>
 
 <script>
-if (!window.history.state) window.history.replaceState({ root: true }, "");
-
 let usdRates = JSON.parse(localStorage.getItem('fx-usd-rates')) || {};
 let countryList = JSON.parse(localStorage.getItem('fx-list')) || {};
 let favorites = JSON.parse(localStorage.getItem('fx-favs')) || [];
@@ -256,6 +254,17 @@ async function init() {
     if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
     updateThemeIcon();
 
+    // The APK Double Anchor
+    window.history.pushState({page: 1}, "");
+    window.addEventListener('popstate', function(event) {
+        const modal = document.getElementById('picker-modal');
+        if (modal.style.display === 'flex') {
+            modal.style.display = 'none';
+            // Re-push so the back button is "armed" again
+            window.history.pushState({page: 1}, "");
+        }
+    });
+
     const lastSyncLabel = localStorage.getItem('fx-last-sync-label');
     if (lastSyncLabel) document.getElementById('last-update').innerText = lastSyncLabel;
 
@@ -269,8 +278,7 @@ async function init() {
         }
         countryList = filtered;
         localStorage.setItem('fx-list', JSON.stringify(countryList));
-    } catch(e) { console.log("Offline or API Error"); }
-
+    } catch(e) {}
     await fetchRates();
 }
 
@@ -280,27 +288,18 @@ async function fetchRates() {
     isSyncing = true;
     const icon = document.getElementById('sync-icon');
     icon.classList.add('spinning');
-
     try {
         const res = await fetch('https://raw.githubusercontent.com/Earendel-lab/Currency/main/rates.json');
         const data = await res.json();
-        
         if(data.rates) {
-            for(let c in data.rates) {
-                usdRates[c.toLowerCase()] = data.rates[c];
-            }
+            for(let c in data.rates) usdRates[c.toLowerCase()] = data.rates[c];
             localStorage.setItem('fx-usd-rates', JSON.stringify(usdRates));
-            
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            const timeStr = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
             localStorage.setItem('fx-last-sync-label', timeStr);
             document.getElementById('last-update').innerText = timeStr;
             convert();
         }
-    } catch (e) {
-        console.log("Using cached rates.");
-        convert();
-    }
+    } catch (e) { convert(); }
     isSyncing = false;
     setTimeout(() => icon.classList.remove('spinning'), 800);
 }
@@ -308,30 +307,16 @@ async function fetchRates() {
 function num(k) {
     haptic();
     const inputEl = document.getElementById('val-in');
-
     if (k === 'AC') {
-        rawInput = "0";
-        isInitialState = true;
-        inputEl.classList.add('is-placeholder');
+        rawInput = "0"; isInitialState = true; inputEl.classList.add('is-placeholder');
     } else if (k === 'DEL') {
         rawInput = rawInput.length > 1 ? rawInput.slice(0, -1) : "0";
-        if (rawInput === "0") {
-            isInitialState = true;
-            inputEl.classList.add('is-placeholder');
-        }
+        if (rawInput === "0") { isInitialState = true; inputEl.classList.add('is-placeholder'); }
     } else {
         if (isInitialState) {
-            if (k === '.') {
-                rawInput = "0.";
-                isInitialState = false;
-                inputEl.classList.remove('is-placeholder');
-            } else if (k === '00' || k === '0') {
-                if(rawInput === "0") { rawInput = "0"; } else { rawInput = k; isInitialState = false; inputEl.classList.remove('is-placeholder'); }
-            } else {
-                rawInput = k;
-                isInitialState = false;
-                inputEl.classList.remove('is-placeholder');
-            }
+            if (k === '.') { rawInput = "0."; isInitialState = false; inputEl.classList.remove('is-placeholder'); }
+            else if (k === '00' || k === '0') { rawInput = "0"; }
+            else { rawInput = k; isInitialState = false; inputEl.classList.remove('is-placeholder'); }
         } else {
             if (k === '.' && rawInput.includes('.')) return;
             if (rawInput.length < 15) rawInput += k;
@@ -343,30 +328,22 @@ function num(k) {
 function convert() {
     const inputEl = document.getElementById('val-in');
     const outputEl = document.getElementById('val-out');
-
     document.getElementById('from-btn-text').innerText = fromCode.toUpperCase();
     document.getElementById('to-btn-text').innerText = toCode.toUpperCase();
     document.getElementById('code-in').innerText = fromCode.toUpperCase();
     document.getElementById('code-out').innerText = toCode.toUpperCase();
-
     const formattedInput = formatIndian(rawInput);
     inputEl.value = formattedInput;
-
     const rFrom = usdRates[fromCode.toLowerCase()] || 1;
     const rTo = usdRates[toCode.toLowerCase()] || 1;
     const finalRate = rTo / rFrom;
-
     document.getElementById('rate-line').innerText = `1 ${fromCode.toUpperCase()} = ${finalRate.toFixed(4)} ${toCode.toUpperCase()}`;
-
     const cleanInput = rawInput.replace(/,/g, '');
     let resVal = parseFloat(cleanInput) * finalRate;
     const formattedOut = isNaN(resVal) ? "0.00" : new Intl.NumberFormat('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(resVal);
     outputEl.innerText = formattedOut;
-
-    const inLen = formattedInput.length;
-    inputEl.style.fontSize = inLen > 12 ? '28px' : inLen > 9 ? '38px' : '52px';
-    const outLen = formattedOut.length;
-    outputEl.style.fontSize = outLen > 12 ? '32px' : outLen > 9 ? '42px' : '60px';
+    inputEl.style.fontSize = formattedInput.length > 12 ? '28px' : formattedInput.length > 9 ? '38px' : '52px';
+    outputEl.style.fontSize = formattedOut.length > 12 ? '32px' : formattedOut.length > 9 ? '42px' : '60px';
 }
 
 function formatIndian(valStr) {
@@ -384,23 +361,12 @@ function openPicker(t) {
     activeTarget = t; 
     document.getElementById('picker-modal').style.display = 'flex'; 
     filterCountries(''); 
-    window.history.pushState({ modalOpen: true }, ""); 
 }
 
 function closePicker() { 
     haptic(); 
     document.getElementById('picker-modal').style.display = 'none'; 
-    if (window.history.state && window.history.state.modalOpen) {
-        window.history.back();
-    }
 }
-
-window.addEventListener('popstate', (e) => {
-    const modal = document.getElementById('picker-modal');
-    if (modal.style.display === 'flex') {
-        modal.style.display = 'none';
-    }
-});
 
 function toggleFav(e, code) {
     e.stopPropagation();
