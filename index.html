@@ -101,9 +101,12 @@
             background: transparent; 
             outline: none; 
             text-align: left; 
-            transition: font-size 0.2s ease;
+            transition: font-size 0.2s ease, opacity 0.3s ease-in-out;
             width: 100%;
+            opacity: 1;
         }
+
+        #val-in.is-placeholder { opacity: 0.35; }
         
         .result-amt { 
             font-size: 60px; 
@@ -239,6 +242,7 @@
     let fromCode = localStorage.getItem('fx-from') || 'usd';
     let toCode = localStorage.getItem('fx-to') || 'sar';
     let rawInput = "1"; 
+    let isInitialState = true;
     let activeTarget = 'from';
     let isSyncing = false;
 
@@ -269,6 +273,10 @@
         } catch(e) { console.log("Offline or API Error"); }
 
         await fetchRates();
+        
+        if (isInitialState) {
+            document.getElementById('val-in').classList.add('is-placeholder');
+        }
     }
 
     async function fetchRates() {
@@ -304,12 +312,35 @@
 
     function num(k) {
         haptic();
-        if (k === 'AC') rawInput = "0";
-        else if (k === 'DEL') rawInput = rawInput.length > 1 ? rawInput.slice(0, -1) : "0";
-        else {
-            if (rawInput === "0" && k !== '.') rawInput = k;
-            else if (k === '.' && rawInput.includes('.')) return;
-            else if (rawInput.length < 15) rawInput += k;
+        const inputEl = document.getElementById('val-in');
+        
+        if (k === 'AC') {
+            rawInput = "0";
+            isInitialState = true;
+            inputEl.classList.add('is-placeholder');
+        } else if (k === 'DEL') {
+            rawInput = rawInput.length > 1 ? rawInput.slice(0, -1) : "0";
+            if (rawInput === "0") {
+                isInitialState = true;
+                inputEl.classList.add('is-placeholder');
+            }
+        } else {
+            if (isInitialState) {
+                if (k === '.') {
+                    rawInput = "0.";
+                    isInitialState = false;
+                    inputEl.classList.remove('is-placeholder');
+                } else if (k === '00' || k === '0') {
+                    rawInput = "0";
+                } else {
+                    rawInput = k;
+                    isInitialState = false;
+                    inputEl.classList.remove('is-placeholder');
+                }
+            } else {
+                if (k === '.' && rawInput.includes('.')) return;
+                if (rawInput.length < 15) rawInput += k;
+            }
         }
         convert();
     }
@@ -353,8 +384,27 @@
         return indFmt.format(parseFloat(valStr));
     }
 
-    function openPicker(t) { haptic(); activeTarget = t; document.getElementById('picker-modal').style.display = 'flex'; filterCountries(''); }
-    function closePicker() { haptic(); document.getElementById('picker-modal').style.display = 'none'; }
+    function openPicker(t) { 
+        haptic(); 
+        activeTarget = t; 
+        document.getElementById('picker-modal').style.display = 'flex'; 
+        filterCountries(''); 
+        window.history.pushState({ modalOpen: true }, '');
+    }
+
+    function closePicker(fromPopState = false) { 
+        haptic(); 
+        document.getElementById('picker-modal').style.display = 'none'; 
+        if (!fromPopState && window.history.state && window.history.state.modalOpen) {
+            window.history.back();
+        }
+    }
+
+    window.onpopstate = function(event) {
+        if (document.getElementById('picker-modal').style.display === 'flex') {
+            closePicker(true);
+        }
+    };
 
     function toggleFav(e, code) {
         e.stopPropagation();
