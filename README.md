@@ -46,6 +46,7 @@
 
 * **Developer**: Built with ❤️.
 * **Rates**: Real-time data provided by Openexchangerates API
+* **Automation**: Uses GitHub Actions to refresh exchange rates every 60 minutes automatically.
 
 ---
 
