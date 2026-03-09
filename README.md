@@ -2,6 +2,8 @@
 
 > **Simple. Minimal. Precise.** A currency converter inspired by the structural aesthetics of **Nothing OS**.
 
+[<img height="80" alt="Get it on GitHub" src="./.github/assets/get-it-on-github.png" />](https://github.com/Earendel-lab/Currency/releases)
+
 ---
 
 ##  **Key Features**
