@@ -36,6 +36,7 @@
             font-family: "Times New Roman", Times, Baskerville, Georgia, serif; 
             -webkit-tap-highlight-color: transparent; 
             user-select: none;
+            -webkit-user-select: none;
         }
 
         body { 
@@ -53,15 +54,13 @@
         }
 
         .top-nav { display: flex; justify-content: space-between; align-items: center; height: 44px; margin-bottom: 10px; }
-        .sync-container { display: flex; align-items: center; height: 100%; cursor: pointer; }
-
+        
         .update-time { 
             font-size: 11px; 
             color: var(--secondary-text); 
             text-transform: uppercase; 
             font-family: sans-serif;
             letter-spacing: 0.5px;
-            line-height: 44px; 
         }
         
         .mode-toggle { cursor: pointer; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; }
@@ -90,29 +89,30 @@
         
         .input-scroll::-webkit-scrollbar { display: none; }
         
-        #display-in { 
+        .fake-input { 
             font-size: 52px; 
             font-weight: 300; 
             color: var(--text); 
             text-align: left; 
             transition: font-size 0.2s ease;
             white-space: nowrap;
-            display: flex;
-            align-items: center;
+            display: inline-block;
         }
 
-        .custom-caret {
-            width: 2.5px;
-            height: 45px;
-            background: var(--accent);
-            margin-left: 2px;
+        .cursor {
             display: inline-block;
+            width: 1.2px;
+            height: 1em;
+            background-color: var(--accent);
+            margin-left: 1px;
+            margin-right: 1px;
             animation: blink 1s step-end infinite;
+            vertical-align: -0.1em;
         }
 
         @keyframes blink {
-            from, to { background: transparent; }
-            50% { background: var(--accent); }
+            from, to { opacity: 1; }
+            50% { opacity: 0; }
         }
 
         .is-placeholder { opacity: 0.35 !important; }
@@ -174,7 +174,7 @@
 
         #picker-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); z-index: 1000; display: none; flex-direction: column; padding: 20px; padding-top: env(safe-area-inset-top); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-family: sans-serif; }
-        .search-in { background: var(--key-bg); border: none; padding: 18px; border-radius: 20px; color: var(--text); width: 100%; margin-bottom: 15px; font-size: 18px; outline: none; user-select: text; }
+        .search-in { background: var(--key-bg); border: none; padding: 18px; border-radius: 20px; color: var(--text); width: 100%; margin-bottom: 15px; font-size: 18px; outline: none; user-select: text; -webkit-user-select: text; caret-color: var(--accent); }
         
         .country-list { flex: 1; overflow-y: scroll; -webkit-overflow-scrolling: touch; }
         .country-item { padding: 20px; border-bottom: 1px solid var(--key-bg); display: flex; justify-content: space-between; align-items: center; font-family: sans-serif; cursor: pointer; }
@@ -183,7 +183,7 @@
         .star-svg.active { fill: var(--accent); stroke: var(--accent); }
     </style>
 </head>
-<body>
+<body onclick="handleClickOutside(event)">
 
 <div id="picker-modal">
     <div class="modal-header">
@@ -204,8 +204,8 @@
 
     <div class="display-area">
         <div class="input-wrapper">
-            <div class="input-scroll">
-                <div id="display-in"><span id="val-in-text">1</span><span class="custom-caret"></span></div>
+            <div class="input-scroll" onclick="handleInputTap(event)">
+                <div class="fake-input" id="val-in-display"></div>
             </div>
             <div id="code-in" class="code-tag">USD</div>
         </div>
@@ -255,15 +255,17 @@
     let favorites = JSON.parse(localStorage.getItem('fx-favs')) || [];
     let fromCode = localStorage.getItem('fx-from') || 'usd';
     let toCode = localStorage.getItem('fx-to') || 'sar';
-    let rawInput = "1"; 
-    let isInitialState = true;
+    
+    let rawValue = "1";
+    let cursorPosition = 1;
+    let isFocused = false;
+    
     let activeTarget = 'from';
     let isSyncing = false;
     let delInterval;
     let isDeleting = false;
 
     const blacklist = ['btc','eth','ltc','xrp','bch','dot','link','xlm','ada','bnb','usdt','ust','sol','matic','xag','xau','xpd','xpt','std','ves','byr','cup','zrn'];
-    const indFmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 8 });
 
     function haptic() {
         if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
@@ -287,13 +289,34 @@
             localStorage.setItem('fx-list', JSON.stringify(countryList));
         } catch(e) { console.log("Offline Mode"); }
         await fetchRates();
+        renderInput();
+    }
+
+    function handleInputTap(e) {
+        e.stopPropagation();
+        isFocused = true;
+        const scrollBox = e.currentTarget;
+        const rect = scrollBox.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const displayWidth = document.getElementById('val-in-display').offsetWidth;
+        
+        const charWidth = displayWidth / rawValue.length;
+        cursorPosition = Math.max(0, Math.min(rawValue.length, Math.round(clickX / charWidth)));
+        
+        renderInput();
+    }
+
+    function handleClickOutside(e) {
+        if (!e.target.closest('.input-scroll') && !e.target.closest('.key')) {
+            isFocused = false;
+            renderInput();
+        }
     }
 
     async function fetchRates() {
         if (isSyncing) return;
         haptic();
         isSyncing = true;
-        const timeEl = document.getElementById('last-update');
         try {
             const res = await fetch('https://raw.githubusercontent.com/Earendel-lab/Currency/main/rates.json');
             const data = await res.json();
@@ -303,7 +326,7 @@
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
                 localStorage.setItem('fx-last-sync-label', timeStr);
-                timeEl.innerText = timeStr;
+                document.getElementById('last-update').innerText = timeStr;
                 convert();
             }
         } catch (e) { convert(); }
@@ -312,100 +335,96 @@
 
     function num(k) {
         haptic();
-        const displayContainer = document.getElementById('display-in');
-        
+        isFocused = true; 
         if (k === 'AC') {
-            rawInput = "0"; isInitialState = true;
+            rawValue = "0";
+            cursorPosition = 1;
         } else {
-            if (isInitialState) {
-                if (k === '.') { rawInput = "0."; isInitialState = false; }
-                else if (k === '00' || k === '0') { rawInput = "0"; }
-                else { rawInput = k; isInitialState = false; }
+            if (rawValue === "0" && k !== '.') {
+                rawValue = k;
+                cursorPosition = k.length;
             } else {
-                if (k === '.' && rawInput.includes('.')) return;
-                if (rawInput.length < 15) rawInput += k;
+                if (k === '.' && rawValue.includes('.')) return;
+                if (rawValue.length < 15) {
+                    const before = rawValue.substring(0, cursorPosition);
+                    const after = rawValue.substring(cursorPosition);
+                    rawValue = before + k + after;
+                    cursorPosition += k.length;
+                }
             }
         }
-        
-        if(rawInput === "0") displayContainer.classList.add('is-placeholder');
-        else displayContainer.classList.remove('is-placeholder');
-        convert();
+        renderInput();
     }
 
     function performDelete() {
-        if (rawInput.length > 1) {
-            rawInput = rawInput.slice(0, -1);
-        } else {
-            rawInput = "0";
-            isInitialState = true;
-            document.getElementById('display-in').classList.add('is-placeholder');
+        if (cursorPosition > 0) {
+            const before = rawValue.substring(0, cursorPosition - 1);
+            const after = rawValue.substring(cursorPosition);
+            rawValue = (before + after) || "0";
+            cursorPosition = Math.max(0, cursorPosition - 1);
+            if (rawValue === "") { rawValue = "0"; cursorPosition = 1; }
         }
-        convert();
-        return false;
+        renderInput();
     }
 
     function startDel(e) {
         if (e && e.cancelable) e.preventDefault();
-        if (isDeleting) return;
         isDeleting = true;
         haptic();
-        
         performDelete();
-
         let speed = 300;
         const run = () => {
             if (!isDeleting) return;
             haptic();
             performDelete();
-            if (rawInput === "0") { stopDel(); return; }
+            if (rawValue === "0" && cursorPosition === 1) { stopDel(); return; }
             speed = Math.max(50, speed * 0.8);
             delInterval = setTimeout(run, speed);
         };
         delInterval = setTimeout(run, speed);
     }
 
-    function stopDel(e) {
-        if (e && e.cancelable) e.preventDefault();
+    function stopDel() {
         isDeleting = false;
         clearTimeout(delInterval);
     }
 
+    function renderInput() {
+        const display = document.getElementById('val-in-display');
+        const before = rawValue.substring(0, cursorPosition);
+        const after = rawValue.substring(cursorPosition);
+        
+        const cursorHtml = isFocused ? `<span class="cursor"></span>` : '';
+        display.innerHTML = `${before}${cursorHtml}${after}`;
+        
+        if(rawValue === "0") display.classList.add('is-placeholder');
+        else display.classList.remove('is-placeholder');
+        
+        convert();
+    }
+
     function convert() {
-        const textEl = document.getElementById('val-in-text');
         const outputEl = document.getElementById('val-out');
-        const displayArea = document.getElementById('display-in');
+        const displayArea = document.getElementById('val-in-display');
         
         document.getElementById('from-btn-text').innerText = fromCode.toUpperCase();
         document.getElementById('to-btn-text').innerText = toCode.toUpperCase();
         document.getElementById('code-in').innerText = fromCode.toUpperCase();
         document.getElementById('code-out').innerText = toCode.toUpperCase();
         
-        const formattedInput = formatIndian(rawInput);
-        textEl.innerText = formattedInput;
-        
         const rFrom = usdRates[fromCode.toLowerCase()] || 1;
         const rTo = usdRates[toCode.toLowerCase()] || 1;
         const finalRate = rTo / rFrom;
         document.getElementById('rate-line').innerText = `1 ${fromCode.toUpperCase()} = ${finalRate.toFixed(4)} ${toCode.toUpperCase()}`;
         
-        let resVal = parseFloat(rawInput.replace(/,/g, '')) * finalRate;
+        let resVal = parseFloat(rawValue) * finalRate;
         const formattedOut = isNaN(resVal) ? "0.00" : new Intl.NumberFormat('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(resVal);
         outputEl.innerText = formattedOut;
         
-        const inLen = formattedInput.length;
+        const inLen = rawValue.length;
         displayArea.style.fontSize = inLen > 12 ? '28px' : inLen > 9 ? '38px' : '52px';
         const outLen = formattedOut.length;
         outputEl.style.fontSize = outLen > 12 ? '32px' : outLen > 9 ? '42px' : '60px';
-    }
-
-    function formatIndian(valStr) {
-        if (!valStr || valStr === "0") return "0";
-        if (valStr.endsWith('.')) return indFmt.format(parseFloat(valStr.slice(0, -1))) + ".";
-        if (valStr.includes('.')) {
-            const parts = valStr.split('.');
-            return indFmt.format(parseFloat(parts[0] || 0)) + "." + parts[1];
-        }
-        return indFmt.format(parseFloat(valStr));
     }
 
     function openPicker(t) { 
