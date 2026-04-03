@@ -103,6 +103,7 @@
             text-align: left; 
             transition: font-size 0.2s ease, opacity 0.3s ease-in-out;
             width: 100%;
+            caret-color: var(--accent);
         }
 
         .is-placeholder { opacity: 0.35 !important; }
@@ -158,7 +159,7 @@
 
         #picker-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); z-index: 1000; display: none; flex-direction: column; padding: 20px; padding-top: env(safe-area-inset-top); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-family: sans-serif; }
-        .search-in { background: var(--key-bg); border: none; padding: 18px; border-radius: 20px; color: var(--text); width: 100%; margin-bottom: 15px; font-size: 18px; outline: none; }
+        .search-in { background: var(--key-bg); border: none; padding: 18px; border-radius: 20px; color: var(--text); width: 100%; margin-bottom: 15px; font-size: 18px; outline: none; caret-color: var(--accent); }
         
         .country-list { flex: 1; overflow-y: scroll; -webkit-overflow-scrolling: touch; }
         .country-item { padding: 20px; border-bottom: 1px solid var(--key-bg); display: flex; justify-content: space-between; align-items: center; font-family: sans-serif; cursor: pointer; }
@@ -197,7 +198,7 @@
     <div class="display-area">
         <div class="input-wrapper">
             <div class="input-scroll">
-                <input type="text" id="val-in" value="1" readonly>
+                <input type="text" id="val-in" value="1" inputmode="none">
             </div>
             <div id="code-in" class="code-tag">USD</div>
         </div>
@@ -308,6 +309,7 @@
     function num(k) {
         haptic();
         const inputEl = document.getElementById('val-in');
+        inputEl.blur();
         if (k === 'AC') {
             rawInput = "0"; isInitialState = true; inputEl.classList.add('is-placeholder');
         } else if (k === 'DEL') {
@@ -359,25 +361,24 @@
         return indFmt.format(parseFloat(valStr));
     }
 
-    // --- LOUD BACK BUTTON LOGIC ---
     function openPicker(t) { 
         haptic(); 
         activeTarget = t; 
         document.getElementById('picker-modal').style.display = 'flex'; 
         filterCountries(''); 
-        window.location.hash = "picker"; // This makes canGoBack() TRUE for the APK
+        window.location.hash = "picker";
     }
 
     function closePicker() { 
         haptic(); 
+        document.getElementById('search-box').value = '';
         if (window.location.hash === "#picker") {
-            window.history.back(); // This triggers 'hashchange' below
+            window.history.back();
         } else {
             document.getElementById('picker-modal').style.display = 'none';
         }
     }
 
-    // This listens for the APK's goBack() command
     window.addEventListener('hashchange', function() {
         if (!window.location.hash.includes('picker')) {
             document.getElementById('picker-modal').style.display = 'none';
