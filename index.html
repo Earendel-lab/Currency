@@ -37,15 +37,19 @@
             -webkit-tap-highlight-color: transparent; 
         }
 
-        /* Red Selection & Thumb */
         ::selection {
-            background: #D71921;
-            color: #FFFFFF;
+            background: #D71921 !important;
+            color: #FFFFFF !important;
         }
 
         ::-moz-selection {
-            background: #D71921;
-            color: #FFFFFF;
+            background: #D71921 !important;
+            color: #FFFFFF !important;
+        }
+
+        * {
+            caret-color: #D71921 !important;
+            accent-color: #D71921 !important;
         }
 
         body { 
@@ -53,7 +57,6 @@
             height: 100dvh; display: flex; justify-content: center; 
             overflow: hidden; position: fixed; width: 100%;
             transition: background 0.3s ease;
-            accent-color: #D71921;
         }
 
         .app-container { 
@@ -64,30 +67,31 @@
         }
 
         .top-nav { display: flex; justify-content: space-between; align-items: center; height: 44px; margin-bottom: 10px; }
-        .sync-container { display: flex; align-items: center; gap: 10px; height: 100%; cursor: pointer; }
-        .sync-btn-wrapper { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
-
-        .sync-svg {
-            width: 22px; height: 22px;
-            fill: none; stroke: var(--accent);
-            stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
-            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .spinning { transform: rotate(360deg); }
+        .sync-container { display: flex; align-items: center; height: 100%; cursor: pointer; }
 
         .update-time { 
-            font-size: 11px; color: var(--secondary-text); 
-            text-transform: uppercase; font-family: sans-serif;
+            font-size: 11px; 
+            color: var(--secondary-text); 
+            text-transform: uppercase; 
+            font-family: sans-serif;
             letter-spacing: 0.5px;
-            line-height: 32px; 
+            line-height: 44px; 
         }
-
+        
         .mode-toggle { cursor: pointer; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; }
         .icon-svg { width: 22px; height: 22px; stroke: var(--text); fill: none; stroke-width: 2; }
 
         .display-area { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 180px; }
-        .input-wrapper { display: flex; align-items: center; justify-content: space-between; height: 70px; gap: 8px; }
+        
+        .input-wrapper { 
+            display: flex; 
+            align-items: baseline; 
+            justify-content: space-between; 
+            height: 70px; 
+            gap: 12px; 
+            width: 100%;
+        }
+
         .input-scroll { 
             flex: 1; 
             overflow-x: auto; 
@@ -95,7 +99,6 @@
             -webkit-overflow-scrolling: touch; 
             display: flex; 
             align-items: center; 
-            justify-content: flex-start;
             min-width: 0;
             scrollbar-width: none;
         }
@@ -103,8 +106,6 @@
         .input-scroll::-webkit-scrollbar { display: none; }
         
         #val-in { 
-            white-space: nowrap; 
-            min-width: fit-content;
             font-size: 52px; 
             font-weight: 300; 
             color: var(--text); 
@@ -112,9 +113,12 @@
             background: transparent; 
             outline: none; 
             text-align: left; 
-            transition: font-size 0.2s ease, opacity 0.3s ease-in-out;
+            transition: font-size 0.2s ease;
             width: 100%;
-            caret-color: var(--accent);
+            padding: 0;
+            margin: 0;
+            caret-color: #D71921;
+            -webkit-tap-highlight-color: rgba(215, 25, 33, 0.1);
         }
 
         .is-placeholder { opacity: 0.35 !important; }
@@ -129,11 +133,19 @@
             white-space: nowrap; 
             transition: font-size 0.2s ease;
             text-align: left;
+            scrollbar-width: none;
         }
         
         .result-amt::-webkit-scrollbar { display: none; }
         
-        .code-tag { font-family: sans-serif; font-weight: 700; color: var(--secondary-text); font-size: 18px; flex-shrink: 0; }
+        .code-tag { 
+            font-family: sans-serif; 
+            font-weight: 700; 
+            color: var(--secondary-text); 
+            font-size: 18px; 
+            flex-shrink: 0;
+            align-self: center;
+        }
         .rate-ref { border-top: 1px solid var(--key-bg); padding-top: 8px; font-size: 15px; color: var(--secondary-text); margin-bottom: 15px; }
 
         .selector-box { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; position: relative; height: 64px; }
@@ -191,15 +203,7 @@
 <div class="app-container">
     <div class="top-nav">
         <div class="sync-container" onclick="fetchRates()">
-            <div class="sync-btn-wrapper">
-                <svg class="sync-svg" id="sync-icon" viewBox="0 0 24 24">
-                    <path d="M23 4v6h-6"></path>
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                </svg>
-            </div>
-            <div>
-                <div class="update-time" id="last-update">OFFLINE</div>
-            </div>
+            <div class="update-time" id="last-update">OFFLINE</div>
         </div>
         <div class="mode-toggle" id="mode-icon" onclick="toggleTheme()"></div>
     </div>
@@ -287,7 +291,7 @@
             }
             countryList = filtered;
             localStorage.setItem('fx-list', JSON.stringify(countryList));
-        } catch(e) { console.log("Offline or API Error"); }
+        } catch(e) { console.log("Offline Mode"); }
         await fetchRates();
     }
 
@@ -295,8 +299,8 @@
         if (isSyncing) return;
         haptic();
         isSyncing = true;
-        const icon = document.getElementById('sync-icon');
-        icon.classList.add('spinning');
+        const timeEl = document.getElementById('last-update');
+        // Red color logic removed from here
         try {
             const res = await fetch('https://raw.githubusercontent.com/Earendel-lab/Currency/main/rates.json');
             const data = await res.json();
@@ -306,32 +310,24 @@
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
                 localStorage.setItem('fx-last-sync-label', timeStr);
-                document.getElementById('last-update').innerText = timeStr;
+                timeEl.innerText = timeStr;
                 convert();
             }
         } catch (e) { convert(); }
         isSyncing = false;
-        setTimeout(() => icon.classList.remove('spinning'), 800);
-    }
-
-    function getCleanInput() {
-        return rawInput.replace(/,/g, '');
+        // Red color removal timeout logic removed from here
     }
 
     function num(k) {
         haptic();
         const inputEl = document.getElementById('val-in');
-        let currentRaw = getCleanInput();
-
-        // Handle replacement if text is selected
+        
         if (inputEl.selectionStart !== null && inputEl.selectionStart !== inputEl.selectionEnd) {
             let start = inputEl.selectionStart;
             let end = inputEl.selectionEnd;
-            let displayVal = inputEl.value;
-            
-            // Map display selection to raw string (ignoring commas)
-            let rawBefore = displayVal.substring(0, start).replace(/,/g, '');
-            let rawAfter = displayVal.substring(end).replace(/,/g, '');
+            let val = inputEl.value;
+            let rawBefore = val.substring(0, start).replace(/,/g, '');
+            let rawAfter = val.substring(end).replace(/,/g, '');
             
             if (k === 'AC') {
                 rawInput = "0"; isInitialState = true;
@@ -354,39 +350,26 @@
             }
         }
         
-        if(rawInput === "0") {
-            inputEl.classList.add('is-placeholder');
-            isInitialState = true;
-        } else {
-            inputEl.classList.remove('is-placeholder');
-        }
+        if(rawInput === "0") inputEl.classList.add('is-placeholder');
+        else inputEl.classList.remove('is-placeholder');
         convert();
     }
 
     function performDelete() {
         const inputEl = document.getElementById('val-in');
-        let displayVal = inputEl.value;
         let start = inputEl.selectionStart;
         let end = inputEl.selectionEnd;
+        let val = inputEl.value;
 
         if (start !== end) {
-            // Precise deletion of selected range
-            let rawBefore = displayVal.substring(0, start).replace(/,/g, '');
-            let rawAfter = displayVal.substring(end).replace(/,/g, '');
-            rawInput = rawBefore + rawAfter;
-            
-            // If we deleted everything or it's empty
-            if (rawInput === "" || rawInput === "0") {
-                rawInput = "0";
-                isInitialState = true;
-                inputEl.classList.add('is-placeholder');
-            }
+            let rawBefore = val.substring(0, start).replace(/,/g, '');
+            let rawAfter = val.substring(end).replace(/,/g, '');
+            rawInput = rawBefore + rawAfter || "0";
+            if (rawInput === "0") isInitialState = true;
             convert();
-            // Reset selection to single point
             inputEl.setSelectionRange(start, start);
-            return true; // selection handled
+            return true;
         } else {
-            // Normal backspace logic
             if (rawInput.length > 1) {
                 rawInput = rawInput.slice(0, -1);
             } else {
@@ -395,7 +378,7 @@
                 inputEl.classList.add('is-placeholder');
             }
             convert();
-            return false; // normal delete
+            return false;
         }
     }
 
@@ -405,21 +388,15 @@
         isDeleting = true;
         haptic();
         
-        // Immediate first delete
         let wasSelection = performDelete();
-        if (wasSelection) {
-            isDeleting = false; return; 
-        }
+        if (wasSelection) { isDeleting = false; return; }
 
         let speed = 300;
         const run = () => {
             if (!isDeleting) return;
             haptic();
             performDelete();
-            if (rawInput === "0") {
-                stopDel();
-                return;
-            }
+            if (rawInput === "0") { stopDel(); return; }
             speed = Math.max(50, speed * 0.8);
             delInterval = setTimeout(run, speed);
         };
@@ -448,8 +425,7 @@
         const finalRate = rTo / rFrom;
         document.getElementById('rate-line').innerText = `1 ${fromCode.toUpperCase()} = ${finalRate.toFixed(4)} ${toCode.toUpperCase()}`;
         
-        const cleanInput = rawInput.replace(/,/g, '');
-        let resVal = parseFloat(cleanInput) * finalRate;
+        let resVal = parseFloat(rawInput.replace(/,/g, '')) * finalRate;
         const formattedOut = isNaN(resVal) ? "0.00" : new Intl.NumberFormat('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(resVal);
         outputEl.innerText = formattedOut;
         
@@ -470,8 +446,7 @@
     }
 
     function openPicker(t) { 
-        haptic(); 
-        activeTarget = t; 
+        haptic(); activeTarget = t; 
         document.getElementById('picker-modal').style.display = 'flex'; 
         filterCountries(''); 
         window.location.hash = "picker";
