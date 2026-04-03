@@ -37,11 +37,23 @@
             -webkit-tap-highlight-color: transparent; 
         }
 
+        /* Red Selection & Thumb */
+        ::selection {
+            background: #D71921;
+            color: #FFFFFF;
+        }
+
+        ::-moz-selection {
+            background: #D71921;
+            color: #FFFFFF;
+        }
+
         body { 
             background: var(--bg); color: var(--text); 
             height: 100dvh; display: flex; justify-content: center; 
             overflow: hidden; position: fixed; width: 100%;
             transition: background 0.3s ease;
+            accent-color: #D71921;
         }
 
         .app-container { 
@@ -86,7 +98,6 @@
             justify-content: flex-start;
             min-width: 0;
             scrollbar-width: none;
-            -ms-overflow-style: none;
         }
         
         .input-scroll::-webkit-scrollbar { display: none; }
@@ -117,8 +128,6 @@
             overflow-y: hidden;
             white-space: nowrap; 
             transition: font-size 0.2s ease;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
             text-align: left;
         }
         
@@ -155,7 +164,7 @@
 
         .key:active { background: var(--key-active); opacity: 0.7; }
         .pill-ac { background: var(--accent); color: white; font-weight: 700; font-size: 24px; }
-        .pill-del { color: var(--accent); font-size: 30px; }
+        .pill-del { color: var(--accent); font-size: 30px; touch-action: none; }
 
         #picker-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); z-index: 1000; display: none; flex-direction: column; padding: 20px; padding-top: env(safe-area-inset-top); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-family: sans-serif; }
@@ -230,7 +239,14 @@
         </div>
         <div class="action-zone">
             <div class="key pill-ac" onclick="num('AC')">AC</div>
-            <div class="key pill-del" onclick="num('DEL')">⌫</div>
+            <div class="key pill-del" 
+                 onmousedown="startDel(event)" 
+                 onmouseup="stopDel(event)" 
+                 onmouseleave="stopDel(event)" 
+                 ontouchstart="startDel(event)" 
+                 ontouchend="stopDel(event)" 
+                 ontouchcancel="stopDel(event)"
+                 oncontextmenu="return false;">⌫</div>
         </div>
     </div>
 </div>
@@ -245,6 +261,8 @@
     let isInitialState = true;
     let activeTarget = 'from';
     let isSyncing = false;
+    let delInterval;
+    let isDeleting = false;
 
     const blacklist = ['btc','eth','ltc','xrp','bch','dot','link','xlm','ada','bnb','usdt','ust','sol','matic','xag','xau','xpd','xpt','std','ves','byr','cup','zrn'];
     const indFmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 8 });
@@ -256,7 +274,6 @@
     async function init() {
         if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
         updateThemeIcon();
-        
         const lastSyncLabel = localStorage.getItem('fx-last-sync-label');
         if (lastSyncLabel) document.getElementById('last-update').innerText = lastSyncLabel;
 
@@ -271,7 +288,6 @@
             countryList = filtered;
             localStorage.setItem('fx-list', JSON.stringify(countryList));
         } catch(e) { console.log("Offline or API Error"); }
-
         await fetchRates();
     }
 
@@ -281,51 +297,139 @@
         isSyncing = true;
         const icon = document.getElementById('sync-icon');
         icon.classList.add('spinning');
-        
         try {
             const res = await fetch('https://raw.githubusercontent.com/Earendel-lab/Currency/main/rates.json');
             const data = await res.json();
-            
             if(data.rates) {
-                for(let c in data.rates) {
-                    usdRates[c.toLowerCase()] = data.rates[c];
-                }
+                for(let c in data.rates) usdRates[c.toLowerCase()] = data.rates[c];
                 localStorage.setItem('fx-usd-rates', JSON.stringify(usdRates));
-                
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
                 localStorage.setItem('fx-last-sync-label', timeStr);
                 document.getElementById('last-update').innerText = timeStr;
                 convert();
             }
-        } catch (e) {
-            console.log("Using cached rates.");
-            convert();
-        }
+        } catch (e) { convert(); }
         isSyncing = false;
         setTimeout(() => icon.classList.remove('spinning'), 800);
+    }
+
+    function getCleanInput() {
+        return rawInput.replace(/,/g, '');
     }
 
     function num(k) {
         haptic();
         const inputEl = document.getElementById('val-in');
-        inputEl.blur();
-        if (k === 'AC') {
-            rawInput = "0"; isInitialState = true; inputEl.classList.add('is-placeholder');
-        } else if (k === 'DEL') {
-            rawInput = rawInput.length > 1 ? rawInput.slice(0, -1) : "0";
-            if (rawInput === "0") { isInitialState = true; inputEl.classList.add('is-placeholder'); }
-        } else {
-            if (isInitialState) {
-                if (k === '.') { rawInput = "0."; isInitialState = false; inputEl.classList.remove('is-placeholder'); }
-                else if (k === '00' || k === '0') { rawInput = "0"; }
-                else { rawInput = k; isInitialState = false; inputEl.classList.remove('is-placeholder'); }
+        let currentRaw = getCleanInput();
+
+        // Handle replacement if text is selected
+        if (inputEl.selectionStart !== null && inputEl.selectionStart !== inputEl.selectionEnd) {
+            let start = inputEl.selectionStart;
+            let end = inputEl.selectionEnd;
+            let displayVal = inputEl.value;
+            
+            // Map display selection to raw string (ignoring commas)
+            let rawBefore = displayVal.substring(0, start).replace(/,/g, '');
+            let rawAfter = displayVal.substring(end).replace(/,/g, '');
+            
+            if (k === 'AC') {
+                rawInput = "0"; isInitialState = true;
             } else {
-                if (k === '.' && rawInput.includes('.')) return;
-                if (rawInput.length < 15) rawInput += k;
+                rawInput = rawBefore + k + rawAfter;
+                isInitialState = false;
+            }
+        } else {
+            if (k === 'AC') {
+                rawInput = "0"; isInitialState = true;
+            } else {
+                if (isInitialState) {
+                    if (k === '.') { rawInput = "0."; isInitialState = false; }
+                    else if (k === '00' || k === '0') { rawInput = "0"; }
+                    else { rawInput = k; isInitialState = false; }
+                } else {
+                    if (k === '.' && rawInput.includes('.')) return;
+                    if (rawInput.length < 15) rawInput += k;
+                }
             }
         }
+        
+        if(rawInput === "0") {
+            inputEl.classList.add('is-placeholder');
+            isInitialState = true;
+        } else {
+            inputEl.classList.remove('is-placeholder');
+        }
         convert();
+    }
+
+    function performDelete() {
+        const inputEl = document.getElementById('val-in');
+        let displayVal = inputEl.value;
+        let start = inputEl.selectionStart;
+        let end = inputEl.selectionEnd;
+
+        if (start !== end) {
+            // Precise deletion of selected range
+            let rawBefore = displayVal.substring(0, start).replace(/,/g, '');
+            let rawAfter = displayVal.substring(end).replace(/,/g, '');
+            rawInput = rawBefore + rawAfter;
+            
+            // If we deleted everything or it's empty
+            if (rawInput === "" || rawInput === "0") {
+                rawInput = "0";
+                isInitialState = true;
+                inputEl.classList.add('is-placeholder');
+            }
+            convert();
+            // Reset selection to single point
+            inputEl.setSelectionRange(start, start);
+            return true; // selection handled
+        } else {
+            // Normal backspace logic
+            if (rawInput.length > 1) {
+                rawInput = rawInput.slice(0, -1);
+            } else {
+                rawInput = "0";
+                isInitialState = true;
+                inputEl.classList.add('is-placeholder');
+            }
+            convert();
+            return false; // normal delete
+        }
+    }
+
+    function startDel(e) {
+        if (e && e.cancelable) e.preventDefault();
+        if (isDeleting) return;
+        isDeleting = true;
+        haptic();
+        
+        // Immediate first delete
+        let wasSelection = performDelete();
+        if (wasSelection) {
+            isDeleting = false; return; 
+        }
+
+        let speed = 300;
+        const run = () => {
+            if (!isDeleting) return;
+            haptic();
+            performDelete();
+            if (rawInput === "0") {
+                stopDel();
+                return;
+            }
+            speed = Math.max(50, speed * 0.8);
+            delInterval = setTimeout(run, speed);
+        };
+        delInterval = setTimeout(run, speed);
+    }
+
+    function stopDel(e) {
+        if (e && e.cancelable) e.preventDefault();
+        isDeleting = false;
+        clearTimeout(delInterval);
     }
 
     function convert() {
@@ -335,16 +439,20 @@
         document.getElementById('to-btn-text').innerText = toCode.toUpperCase();
         document.getElementById('code-in').innerText = fromCode.toUpperCase();
         document.getElementById('code-out').innerText = toCode.toUpperCase();
+        
         const formattedInput = formatIndian(rawInput);
         inputEl.value = formattedInput;
+        
         const rFrom = usdRates[fromCode.toLowerCase()] || 1;
         const rTo = usdRates[toCode.toLowerCase()] || 1;
         const finalRate = rTo / rFrom;
         document.getElementById('rate-line').innerText = `1 ${fromCode.toUpperCase()} = ${finalRate.toFixed(4)} ${toCode.toUpperCase()}`;
+        
         const cleanInput = rawInput.replace(/,/g, '');
         let resVal = parseFloat(cleanInput) * finalRate;
         const formattedOut = isNaN(resVal) ? "0.00" : new Intl.NumberFormat('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(resVal);
         outputEl.innerText = formattedOut;
+        
         const inLen = formattedInput.length;
         inputEl.style.fontSize = inLen > 12 ? '28px' : inLen > 9 ? '38px' : '52px';
         const outLen = formattedOut.length;
@@ -356,7 +464,7 @@
         if (valStr.endsWith('.')) return indFmt.format(parseFloat(valStr.slice(0, -1))) + ".";
         if (valStr.includes('.')) {
             const parts = valStr.split('.');
-            return indFmt.format(parseFloat(parts[0])) + "." + parts[1];
+            return indFmt.format(parseFloat(parts[0] || 0)) + "." + parts[1];
         }
         return indFmt.format(parseFloat(valStr));
     }
@@ -372,17 +480,12 @@
     function closePicker() { 
         haptic(); 
         document.getElementById('search-box').value = '';
-        if (window.location.hash === "#picker") {
-            window.history.back();
-        } else {
-            document.getElementById('picker-modal').style.display = 'none';
-        }
+        if (window.location.hash === "#picker") window.history.back();
+        else document.getElementById('picker-modal').style.display = 'none';
     }
 
     window.addEventListener('hashchange', function() {
-        if (!window.location.hash.includes('picker')) {
-            document.getElementById('picker-modal').style.display = 'none';
-        }
+        if (!window.location.hash.includes('picker')) document.getElementById('picker-modal').style.display = 'none';
     });
 
     function toggleFav(e, code) {
