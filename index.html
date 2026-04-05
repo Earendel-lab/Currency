@@ -117,6 +117,12 @@
 
         .is-placeholder { opacity: 0.35 !important; }
         
+        .selected-text {
+            background-color: var(--accent);
+            color: var(--bg);
+            border-radius: 4px;
+        }
+
         .result-amt { 
             font-size: 60px; 
             font-weight: 200; 
@@ -204,7 +210,7 @@
 
     <div class="display-area">
         <div class="input-wrapper">
-            <div class="input-scroll" onclick="handleInputTap(event)">
+            <div class="input-scroll" onpointerdown="startSelect(event)" onpointermove="moveSelect(event)">
                 <div class="fake-input" id="val-in-display"></div>
             </div>
             <div id="code-in" class="code-tag">USD</div>
@@ -259,6 +265,10 @@
     let rawValue = "1";
     let cursorPosition = 1;
     let isFocused = false;
+    let isInitialState = true;
+    let selStart = -1;
+    let selEnd = -1;
+    let isDragging = false;
     
     let activeTarget = 'from';
     let isSyncing = false;
@@ -287,28 +297,51 @@
             }
             countryList = filtered;
             localStorage.setItem('fx-list', JSON.stringify(countryList));
-        } catch(e) { console.log("Offline Mode"); }
+        } catch(e) {}
         await fetchRates();
         renderInput();
     }
 
-    function handleInputTap(e) {
-        e.stopPropagation();
+    function getIndexFromEvent(e) {
+        const display = document.getElementById('val-in-display');
+        const rect = display.getBoundingClientRect();
+        const clientX = e.clientX ?? (e.touches ? e.touches[0].clientX : 0);
+        const clickX = clientX - rect.left;
+        const displayWidth = display.offsetWidth;
+        const charWidth = displayWidth / Math.max(1, rawValue.length);
+        return Math.max(0, Math.min(rawValue.length, Math.round(clickX / charWidth)));
+    }
+
+    function startSelect(e) {
         isFocused = true;
-        const scrollBox = e.currentTarget;
-        const rect = scrollBox.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const displayWidth = document.getElementById('val-in-display').offsetWidth;
-        
-        const charWidth = displayWidth / rawValue.length;
-        cursorPosition = Math.max(0, Math.min(rawValue.length, Math.round(clickX / charWidth)));
-        
+        isInitialState = false;
+        isDragging = true;
+        const idx = getIndexFromEvent(e);
+        cursorPosition = idx;
+        selStart = idx;
+        selEnd = idx;
         renderInput();
     }
+
+    function moveSelect(e) {
+        if (!isDragging) return;
+        selEnd = getIndexFromEvent(e);
+        cursorPosition = selEnd;
+        renderInput();
+    }
+
+    function endSelect() {
+        isDragging = false;
+    }
+
+    window.addEventListener('pointerup', endSelect);
+    window.addEventListener('touchend', endSelect);
 
     function handleClickOutside(e) {
         if (!e.target.closest('.input-scroll') && !e.target.closest('.key')) {
             isFocused = false;
+            selStart = -1;
+            selEnd = -1;
             renderInput();
         }
     }
@@ -339,8 +372,32 @@
         if (k === 'AC') {
             rawValue = "0";
             cursorPosition = 1;
+            selStart = -1;
+            selEnd = -1;
+            isInitialState = false;
         } else {
-            if (rawValue === "0" && k !== '.') {
+            let start = Math.min(selStart, selEnd);
+            let end = Math.max(selStart, selEnd);
+
+            if (start !== end && start !== -1) {
+                const before = rawValue.substring(0, start);
+                const after = rawValue.substring(end);
+                if (k === '.' && (before + after).includes('.')) return;
+                rawValue = before + k + after;
+                cursorPosition = start + k.length;
+                selStart = -1;
+                selEnd = -1;
+                isInitialState = false;
+            } else if (isInitialState) {
+                if (k === '.') {
+                    rawValue = "1.";
+                    cursorPosition = 2;
+                } else {
+                    rawValue = k;
+                    cursorPosition = k.length;
+                }
+                isInitialState = false;
+            } else if (rawValue === "0" && k !== '.') {
                 rawValue = k;
                 cursorPosition = k.length;
             } else {
@@ -357,13 +414,25 @@
     }
 
     function performDelete() {
-        if (cursorPosition > 0) {
+        let start = Math.min(selStart, selEnd);
+        let end = Math.max(selStart, selEnd);
+
+        if (start !== end && start !== -1) {
+            const before = rawValue.substring(0, start);
+            const after = rawValue.substring(end);
+            rawValue = (before + after) || "0";
+            cursorPosition = start;
+            selStart = -1;
+            selEnd = -1;
+            if (rawValue === "0") cursorPosition = 1;
+        } else if (cursorPosition > 0) {
             const before = rawValue.substring(0, cursorPosition - 1);
             const after = rawValue.substring(cursorPosition);
             rawValue = (before + after) || "0";
             cursorPosition = Math.max(0, cursorPosition - 1);
-            if (rawValue === "") { rawValue = "0"; cursorPosition = 1; }
+            if (rawValue === "0") cursorPosition = 1;
         }
+        isInitialState = false;
         renderInput();
     }
 
@@ -391,11 +460,20 @@
 
     function renderInput() {
         const display = document.getElementById('val-in-display');
-        const before = rawValue.substring(0, cursorPosition);
-        const after = rawValue.substring(cursorPosition);
-        
-        const cursorHtml = isFocused ? `<span class="cursor"></span>` : '';
-        display.innerHTML = `${before}${cursorHtml}${after}`;
+        let start = Math.min(selStart, selEnd);
+        let end = Math.max(selStart, selEnd);
+
+        if (start !== end && start !== -1) {
+            const before = rawValue.substring(0, start);
+            const selected = rawValue.substring(start, end);
+            const after = rawValue.substring(end);
+            display.innerHTML = `${before}<span class="selected-text">${selected}</span>${after}`;
+        } else {
+            const before = rawValue.substring(0, cursorPosition);
+            const after = rawValue.substring(cursorPosition);
+            const cursorHtml = isFocused ? `<span class="cursor"></span>` : '';
+            display.innerHTML = `${before}${cursorHtml}${after}`;
+        }
         
         if(rawValue === "0") display.classList.add('is-placeholder');
         else display.classList.remove('is-placeholder');
