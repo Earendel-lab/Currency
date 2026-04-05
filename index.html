@@ -41,20 +41,6 @@
             caret-color: #D71921 !important;
         }
 
-        /*
-         * Three-pronged attack on Android's cyan caret:
-         *
-         * 1. accent-color — modern Android WebView (Chrome 93+) derives the
-         *    caret color from accent-color when caret-color isn't respected.
-         *    Setting it explicitly on the element (not just body) overrides
-         *    the WebView's system accent.
-         *
-         * 2. color-scheme — telling the WebView this is a dark surface stops
-         *    it from injecting light-mode system UI colors (including cyan).
-         *
-         * 3. forceCaret() in JS — re-applies both properties imperatively on
-         *    every focus and keypress, because Android resets them after focus.
-         */
         [contenteditable] {
             caret-color: #D71921 !important;
             accent-color: #D71921 !important;
@@ -283,9 +269,6 @@
         if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
     }
 
-    // Re-applies caret + accent color imperatively.
-    // Android WebView resets these to the system accent on every focus event,
-    // so we have to fight it on focus, click, and every input interaction.
     function forceCaret(el) {
         el.style.setProperty('caret-color', '#D71921', 'important');
         el.style.setProperty('accent-color', '#D71921', 'important');
