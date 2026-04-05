@@ -5,7 +5,7 @@
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Earendel-lab/Currency/main/icon.png">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/Earendel-lab/Currency/main/icon.png">
     
-    <meta name="theme-color" content="#000000">
+    <meta name="theme-color" content="#D71921">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -31,7 +31,6 @@
             --key-active: #C7C7CC;
         }
 
-        /* Standard selection and cursor color */
         ::selection { background: var(--accent); color: #FFFFFF; }
         ::-webkit-selection { background: var(--accent); color: #FFFFFF; }
 
@@ -39,8 +38,31 @@
             margin: 0; padding: 0; box-sizing: border-box; 
             font-family: "Times New Roman", Times, Baskerville, Georgia, serif; 
             -webkit-tap-highlight-color: transparent;
-            /* Attempting to force red handles/cursor at the root level */
             caret-color: #D71921 !important;
+        }
+
+        /*
+         * Three-pronged attack on Android's cyan caret:
+         *
+         * 1. accent-color — modern Android WebView (Chrome 93+) derives the
+         *    caret color from accent-color when caret-color isn't respected.
+         *    Setting it explicitly on the element (not just body) overrides
+         *    the WebView's system accent.
+         *
+         * 2. color-scheme — telling the WebView this is a dark surface stops
+         *    it from injecting light-mode system UI colors (including cyan).
+         *
+         * 3. forceCaret() in JS — re-applies both properties imperatively on
+         *    every focus and keypress, because Android resets them after focus.
+         */
+        [contenteditable] {
+            caret-color: #D71921 !important;
+            accent-color: #D71921 !important;
+            color-scheme: dark;
+        }
+
+        body.light-mode [contenteditable] {
+            color-scheme: light;
         }
 
         body { 
@@ -48,6 +70,7 @@
             height: 100dvh; display: flex; justify-content: center; 
             overflow: hidden; position: fixed; width: 100%;
             transition: background 0.3s ease;
+            accent-color: #D71921;
         }
 
         .app-container { 
@@ -102,7 +125,8 @@
             white-space: nowrap;
             display: inline-block;
             outline: none;
-            caret-color: var(--accent) !important;
+            caret-color: #D71921 !important;
+            accent-color: #D71921 !important;
             min-width: 10px;
         }
 
@@ -164,7 +188,7 @@
 
         #picker-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); z-index: 1000; display: none; flex-direction: column; padding: 20px; padding-top: env(safe-area-inset-top); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-family: sans-serif; }
-        .search-in { background: var(--key-bg); border: none; padding: 18px; border-radius: 20px; color: var(--text); width: 100%; margin-bottom: 15px; font-size: 18px; outline: none; caret-color: var(--accent); }
+        .search-in { background: var(--key-bg); border: none; padding: 18px; border-radius: 20px; color: var(--text); width: 100%; margin-bottom: 15px; font-size: 18px; outline: none; caret-color: #D71921; accent-color: #D71921; }
         
         .country-list { flex: 1; overflow-y: scroll; -webkit-overflow-scrolling: touch; }
         .country-item { padding: 20px; border-bottom: 1px solid var(--key-bg); display: flex; justify-content: space-between; align-items: center; font-family: sans-serif; cursor: pointer; }
@@ -259,11 +283,25 @@
         if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
     }
 
+    // Re-applies caret + accent color imperatively.
+    // Android WebView resets these to the system accent on every focus event,
+    // so we have to fight it on focus, click, and every input interaction.
+    function forceCaret(el) {
+        el.style.setProperty('caret-color', '#D71921', 'important');
+        el.style.setProperty('accent-color', '#D71921', 'important');
+    }
+
     async function init() {
         if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
         updateThemeIcon();
         const lastSyncLabel = localStorage.getItem('fx-last-sync-label');
         if (lastSyncLabel) document.getElementById('last-update').innerText = lastSyncLabel;
+
+        const display = document.getElementById('val-in-display');
+        display.addEventListener('focus',     () => forceCaret(display));
+        display.addEventListener('click',     () => forceCaret(display));
+        display.addEventListener('touchstart',() => forceCaret(display), { passive: true });
+        display.addEventListener('selectionchange', () => forceCaret(display));
 
         try {
             const res = await fetch(`https://openexchangerates.org/api/currencies.json`);
@@ -308,14 +346,13 @@
         haptic();
         const display = document.getElementById('val-in-display');
         display.focus();
+        forceCaret(display);
         
         if (k === 'AC') {
             display.innerText = "0";
             isInitialState = true;
-            // Clear selections when hitting AC
             window.getSelection().removeAllRanges();
         } else {
-            // Replace initial 1 or 0 if hasn't been touched
             if (isInitialState && k !== '.') {
                 document.execCommand('selectAll', false, null);
                 isInitialState = false;
@@ -334,6 +371,7 @@
 
     function handleManualInput() {
         const display = document.getElementById('val-in-display');
+        forceCaret(display);
         let text = display.innerText.replace(/[^0-9.]/g, '');
         if (text === "") text = "0";
         rawValue = text;
