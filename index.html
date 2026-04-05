@@ -31,6 +31,7 @@
             --key-active: #C7C7CC;
         }
 
+        /* The selection and cursor color fixes */
         ::selection {
             background: var(--accent);
             color: #FFFFFF;
@@ -43,7 +44,9 @@
         * { 
             margin: 0; padding: 0; box-sizing: border-box; 
             font-family: "Times New Roman", Times, Baskerville, Georgia, serif; 
-            -webkit-tap-highlight-color: transparent; 
+            -webkit-tap-highlight-color: transparent;
+            /* This tells Android to try and use the accent color for handles */
+            caret-color: #D71921; 
         }
 
         body { 
@@ -105,6 +108,7 @@
             white-space: nowrap;
             display: inline-block;
             outline: none;
+            /* Ensures the blinking cursor is Nothing Red */
             caret-color: var(--accent);
             min-width: 10px;
         }
@@ -122,6 +126,8 @@
             width: 100%;
             text-align: left;
             font-family: inherit;
+            /* Also for the result if selectable */
+            caret-color: var(--accent);
         }
         
         .code-tag { 
@@ -317,7 +323,6 @@
             isInitialState = true;
             window.getSelection().removeAllRanges();
         } else {
-            // Replaces initial 1 or 0 if user hasn't manually moved cursor yet
             if (isInitialState && k !== '.') {
                 document.execCommand('selectAll', false, null);
                 isInitialState = false;
