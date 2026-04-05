@@ -31,7 +31,6 @@
             --key-active: #C7C7CC;
         }
 
-        /* Fixed Selection Color */
         ::selection {
             background: var(--accent);
             color: #FFFFFF;
@@ -52,8 +51,6 @@
             height: 100dvh; display: flex; justify-content: center; 
             overflow: hidden; position: fixed; width: 100%;
             transition: background 0.3s ease;
-            user-select: none;
-            -webkit-user-select: none;
         }
 
         .app-container { 
@@ -95,8 +92,6 @@
             align-items: center; 
             min-width: 0;
             scrollbar-width: none;
-            user-select: text !important;
-            -webkit-user-select: text !important;
         }
         
         .input-scroll::-webkit-scrollbar { display: none; }
@@ -109,23 +104,9 @@
             transition: font-size 0.2s ease;
             white-space: nowrap;
             display: inline-block;
-            pointer-events: auto;
-        }
-
-        .cursor {
-            display: inline-block;
-            width: 1.2px;
-            height: 1em;
-            background-color: var(--accent);
-            margin-left: 1px;
-            margin-right: 1px;
-            animation: blink 1s step-end infinite;
-            vertical-align: -0.1em;
-        }
-
-        @keyframes blink {
-            from, to { opacity: 1; }
-            50% { opacity: 0; }
+            outline: none;
+            caret-color: var(--accent);
+            min-width: 10px;
         }
 
         .is-placeholder { opacity: 0.35 !important; }
@@ -141,8 +122,6 @@
             width: 100%;
             text-align: left;
             font-family: inherit;
-            user-select: text !important;
-            -webkit-user-select: text !important;
         }
         
         .code-tag { 
@@ -177,6 +156,7 @@
             background: var(--key-bg); border-radius: 100px; display: flex; justify-content: center; 
             align-items: center; font-size: 30px; cursor: pointer;
             transition: opacity 0.1s ease, background 0.1s ease;
+            user-select: none; -webkit-user-select: none;
         }
         .numeric-zone .key { aspect-ratio: 1/1; }
         .action-zone .key { flex: 1; border-radius: 100px; width: 100%; }
@@ -187,7 +167,7 @@
 
         #picker-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); z-index: 1000; display: none; flex-direction: column; padding: 20px; padding-top: env(safe-area-inset-top); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-family: sans-serif; }
-        .search-in { background: var(--key-bg); border: none; padding: 18px; border-radius: 20px; color: var(--text); width: 100%; margin-bottom: 15px; font-size: 18px; outline: none; user-select: text; -webkit-user-select: text; caret-color: var(--accent); }
+        .search-in { background: var(--key-bg); border: none; padding: 18px; border-radius: 20px; color: var(--text); width: 100%; margin-bottom: 15px; font-size: 18px; outline: none; caret-color: var(--accent); }
         
         .country-list { flex: 1; overflow-y: scroll; -webkit-overflow-scrolling: touch; }
         .country-item { padding: 20px; border-bottom: 1px solid var(--key-bg); display: flex; justify-content: space-between; align-items: center; font-family: sans-serif; cursor: pointer; }
@@ -196,7 +176,7 @@
         .star-svg.active { fill: var(--accent); stroke: var(--accent); }
     </style>
 </head>
-<body onclick="handleClickOutside(event)">
+<body>
 
 <div id="picker-modal">
     <div class="modal-header">
@@ -218,7 +198,7 @@
     <div class="display-area">
         <div class="input-wrapper">
             <div class="input-scroll">
-                <div class="fake-input" id="val-in-display"></div>
+                <div class="fake-input" id="val-in-display" contenteditable="true" inputmode="none" oninput="handleManualInput()" onmousedown="setInteracted()">1</div>
             </div>
             <div id="code-in" class="code-tag">USD</div>
         </div>
@@ -270,10 +250,7 @@
     let toCode = localStorage.getItem('fx-to') || 'sar';
     
     let rawValue = "1";
-    let cursorPosition = 1;
-    let isFocused = false;
     let isInitialState = true;
-    
     let activeTarget = 'from';
     let isSyncing = false;
     let delInterval;
@@ -303,17 +280,11 @@
             localStorage.setItem('fx-list', JSON.stringify(countryList));
         } catch(e) {}
         await fetchRates();
-        renderInput();
+        convert();
     }
 
-    function handleClickOutside(e) {
-        if (!e.target.closest('.input-scroll') && !e.target.closest('.key') && !e.target.closest('#val-out')) {
-            isFocused = false;
-            renderInput();
-        } else if (e.target.closest('.input-scroll')) {
-            isFocused = true;
-            renderInput();
-        }
+    function setInteracted() {
+        isInitialState = false;
     }
 
     async function fetchRates() {
@@ -338,60 +309,55 @@
 
     function num(k) {
         haptic();
-        isFocused = true; 
+        const display = document.getElementById('val-in-display');
+        display.focus();
+        
         if (k === 'AC') {
-            rawValue = "0";
-            cursorPosition = 1;
-            isInitialState = false;
+            display.innerText = "0";
+            isInitialState = true;
+            window.getSelection().removeAllRanges();
         } else {
-            if (isInitialState) {
-                if (k === '.') {
-                    rawValue = "1.";
-                    cursorPosition = 2;
-                } else {
-                    rawValue = k;
-                    cursorPosition = k.length;
-                }
+            // Replaces initial 1 or 0 if user hasn't manually moved cursor yet
+            if (isInitialState && k !== '.') {
+                document.execCommand('selectAll', false, null);
                 isInitialState = false;
-            } else if (rawValue === "0" && k !== '.') {
-                rawValue = k;
-                cursorPosition = k.length;
+            } else if (isInitialState && k === '.') {
+                isInitialState = false;
+            }
+            
+            if (k === '.') {
+                if (!display.innerText.includes('.')) document.execCommand('insertText', false, '.');
             } else {
-                if (k === '.' && rawValue.includes('.')) return;
-                if (rawValue.length < 15) {
-                    const before = rawValue.substring(0, cursorPosition);
-                    const after = rawValue.substring(cursorPosition);
-                    rawValue = before + k + after;
-                    cursorPosition += k.length;
-                }
+                document.execCommand('insertText', false, k);
             }
         }
-        renderInput();
+        handleManualInput();
     }
 
-    function performDelete() {
-        if (cursorPosition > 0) {
-            const before = rawValue.substring(0, cursorPosition - 1);
-            const after = rawValue.substring(cursorPosition);
-            rawValue = (before + after) || "0";
-            cursorPosition = Math.max(0, cursorPosition - 1);
-            if (rawValue === "0") cursorPosition = 1;
-        }
-        isInitialState = false;
-        renderInput();
+    function handleManualInput() {
+        const display = document.getElementById('val-in-display');
+        let text = display.innerText.replace(/[^0-9.]/g, '');
+        if (text === "") text = "0";
+        rawValue = text;
+        
+        if(rawValue === "0") display.classList.add('is-placeholder');
+        else display.classList.remove('is-placeholder');
+        
+        convert();
     }
 
     function startDel(e) {
         if (e && e.cancelable) e.preventDefault();
         isDeleting = true;
         haptic();
-        performDelete();
+        document.execCommand('delete', false, null);
+        handleManualInput();
         let speed = 300;
         const run = () => {
             if (!isDeleting) return;
             haptic();
-            performDelete();
-            if (rawValue === "0" && cursorPosition === 1) { stopDel(); return; }
+            document.execCommand('delete', false, null);
+            handleManualInput();
             speed = Math.max(50, speed * 0.8);
             delInterval = setTimeout(run, speed);
         };
@@ -401,19 +367,6 @@
     function stopDel() {
         isDeleting = false;
         clearTimeout(delInterval);
-    }
-
-    function renderInput() {
-        const display = document.getElementById('val-in-display');
-        const before = rawValue.substring(0, cursorPosition);
-        const after = rawValue.substring(cursorPosition);
-        const cursorHtml = isFocused ? `<span class="cursor"></span>` : '';
-        display.innerHTML = `${before}${cursorHtml}${after}`;
-        
-        if(rawValue === "0") display.classList.add('is-placeholder');
-        else display.classList.remove('is-placeholder');
-        
-        convert();
     }
 
     function convert() {
