@@ -205,7 +205,7 @@
     <div class="display-area">
         <div class="input-wrapper">
             <div class="input-scroll">
-                <div class="fake-input" id="val-in-display" contenteditable="true" inputmode="none" oninput="handleManualInput()" onmousedown="setInteracted()">1</div>
+                <div class="fake-input" id="val-in-display" contenteditable="true" inputmode="none" virtualkeyboardpolicy="manual" oninput="handleManualInput()" onmousedown="setInteracted()">1</div>
             </div>
             <div id="code-in" class="code-tag">USD</div>
         </div>
@@ -286,8 +286,13 @@
         display.addEventListener('touchstart',() => forceCaret(display), { passive: true });
         display.addEventListener('selectionchange', () => forceCaret(display));
 
+        convert();
+
         try {
-            const res = await fetch(`https://openexchangerates.org/api/currencies.json`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+            const res = await fetch(`https://openexchangerates.org/api/currencies.json`, { signal: controller.signal });
+            clearTimeout(timeoutId);
             const data = await res.json();
             const filtered = {};
             for (let code in data) {
@@ -298,7 +303,6 @@
             localStorage.setItem('fx-list', JSON.stringify(countryList));
         } catch(e) {}
         await fetchRates();
-        convert();
     }
 
     function setInteracted() {
@@ -310,7 +314,10 @@
         haptic();
         isSyncing = true;
         try {
-            const res = await fetch('https://raw.githubusercontent.com/Earendel-lab/Currency/main/rates.json');
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+            const res = await fetch('https://raw.githubusercontent.com/Earendel-lab/Currency/main/rates.json', { signal: controller.signal });
+            clearTimeout(timeoutId);
             const data = await res.json();
             if(data.rates) {
                 for(let c in data.rates) usdRates[c.toLowerCase()] = data.rates[c];
