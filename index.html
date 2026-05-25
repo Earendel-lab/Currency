@@ -316,7 +316,10 @@
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 3000);
-            const res = await fetch('https://raw.githubusercontent.com/Earendel-lab/Currency/main/rates.json', { signal: controller.signal });
+            const res = await fetch('https://raw.githubusercontent.com/Earendel-lab/Currency/main/rates.json', {
+                signal: controller.signal,
+                cache: 'no-store'
+            });
             clearTimeout(timeoutId);
             const data = await res.json();
             if(data.rates) {
