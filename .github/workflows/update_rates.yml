@@ -10,18 +10,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Fetch Rates
+      - name: Fetch Rates and Currencies
         run: |
-          TEMP="rates.tmp.json"
-          curl -s "https://openexchangerates.org/api/latest.json?app_id=${{ secrets.API_KEY }}" -o "$TEMP"
-          if ! grep -q '"rates"' "$TEMP"; then exit 0; fi
-          if [ -f rates.json ] && cmp -s "$TEMP" rates.json; then exit 0; fi
-          mv "$TEMP" rates.json
+          TEMP_RATES="rates.tmp.json"
+          TEMP_CURR="currencies.tmp.json"
+          curl -s "https://openexchangerates.org/api/latest.json?app_id=${{ secrets.API_KEY }}" -o "$TEMP_RATES"
+          curl -s "https://openexchangerates.org/api/currencies.json" -o "$TEMP_CURR"
+          if ! grep -q '"rates"' "$TEMP_RATES"; then exit 0; fi
+          if ! grep -q '"USD"' "$TEMP_CURR"; then exit 0; fi
+          if [ -f rates.json ] && cmp -s "$TEMP_RATES" rates.json; then rm "$TEMP_RATES"; else mv "$TEMP_RATES" rates.json; fi
+          if [ -f currencies.json ] && cmp -s "$TEMP_CURR" currencies.json; then rm "$TEMP_CURR"; else mv "$TEMP_CURR" currencies.json; fi
       - name: Commit and Push
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add rates.json
-          git diff --cached --quiet || git commit -m "Update rates"
+          git add rates.json currencies.json
+          git diff --cached --quiet || git commit -m "Update rates and currencies"
           git pull --rebase --autostash
           git push
