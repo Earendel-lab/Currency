@@ -115,6 +115,9 @@
             accent-color: #D71921 !important;
             min-width: 10px;
             cursor: text;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         .input-scroll { cursor: text; }
@@ -286,7 +289,7 @@
         const display = document.getElementById('val-in-display');
         display.addEventListener('focus',     () => forceCaret(display));
         display.addEventListener('click',     () => forceCaret(display));
-        display.addEventListener('touchstart',() => forceCaret(display), { passive: true });
+        display.addEventListener('touchstart', () => forceCaret(display), { passive: true });
         display.addEventListener('selectionchange', () => forceCaret(display));
 
         convert();
