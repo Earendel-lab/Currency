@@ -14,6 +14,7 @@ jobs:
         run: |
           TEMP="rates.tmp.json"
           curl -s "https://openexchangerates.org/api/latest.json?app_id=${{ secrets.API_KEY }}" -o "$TEMP"
+          if ! grep -q '"rates"' "$TEMP"; then exit 0; fi
           if [ -f rates.json ] && cmp -s "$TEMP" rates.json; then exit 0; fi
           mv "$TEMP" rates.json
       - name: Commit and Push
