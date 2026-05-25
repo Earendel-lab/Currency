@@ -114,7 +114,10 @@
             caret-color: #D71921 !important;
             accent-color: #D71921 !important;
             min-width: 10px;
+            cursor: text;
         }
+
+        .input-scroll { cursor: text; }
 
         .is-placeholder { opacity: 0.35 !important; }
         
@@ -291,7 +294,7 @@
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 3000);
-            const res = await fetch(`https://openexchangerates.org/api/currencies.json`, { signal: controller.signal });
+            const res = await fetch('https://raw.githubusercontent.com/Earendel-lab/Currency/main/currencies.json', { signal: controller.signal, cache: 'no-store' });
             clearTimeout(timeoutId);
             const data = await res.json();
             const filtered = {};
@@ -325,10 +328,14 @@
             if(data.rates) {
                 for(let c in data.rates) usdRates[c.toLowerCase()] = data.rates[c];
                 localStorage.setItem('fx-usd-rates', JSON.stringify(usdRates));
-                const now = new Date();
-                const timeStr = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                const rateTime = data.timestamp ? new Date(data.timestamp * 1000) : new Date();
+                const timeStr = rateTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                const ageMs = Date.now() - rateTime.getTime();
+                const isStale = ageMs > 3 * 60 * 60 * 1000;
+                const label = document.getElementById('last-update');
+                label.innerText = timeStr;
+                label.style.color = isStale ? 'var(--accent)' : 'var(--secondary-text)';
                 localStorage.setItem('fx-last-sync-label', timeStr);
-                document.getElementById('last-update').innerText = timeStr;
                 convert();
             }
         } catch (e) { convert(); }
