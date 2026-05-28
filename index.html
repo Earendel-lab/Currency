@@ -294,7 +294,7 @@
 
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 3000);
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
             const res = await fetch('https://raw.githubusercontent.com/Earendel-lab/Currency/main/currencies.json', { signal: controller.signal, cache: 'no-store' });
             clearTimeout(timeoutId);
             const data = await res.json();
@@ -330,7 +330,7 @@
                 for(let c in data.rates) usdRates[c.toLowerCase()] = data.rates[c];
                 localStorage.setItem('fx-usd-rates', JSON.stringify(usdRates));
                 const rateTime = data.timestamp ? new Date(data.timestamp * 1000) : new Date();
-                const timeStr = rateTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                const timeStr = rateTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12: true});
                 const ageMs = Date.now() - rateTime.getTime();
                 const isStale = ageMs > 3 * 60 * 60 * 1000;
                 const label = document.getElementById('last-update');
